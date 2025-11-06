@@ -1,0 +1,14 @@
+triggers: [push, pull_request]
+docs:
+  api: true
+  changelog: true
+  adrs: false
+refactor:
+  enabled: true
+  recipes:
+    - rename_symbol
+    - move_module
+safety:
+  require_tests_green: true
+  max_changed_files: 200
+  guard_paths: ["infra/db/migrations/**"]
