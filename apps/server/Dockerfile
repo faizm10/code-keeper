@@ -1,19 +1,26 @@
 # Use a small official Node image. Alpine = tiny, fast to pull.
 FROM node:20-alpine
 
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
+
 # Create a dedicated app directory inside the container.
 WORKDIR /app
 
-# Copy only package metadata first to leverage Docker layer caching.
-# If package.json doesn't change, `npm ci` won't rerun on rebuilds.
-COPY package.json package-lock.json* ./
+# Copy workspace root files for pnpm workspace support
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
+COPY packages ./packages
 
-# Install dependencies in a clean, reproducible way.
-# - `npm ci` expects a lockfile; it's faster and more reliable than `npm install`.
-RUN npm ci --no-audit --no-fund
+# Copy server dependency manifest
+COPY apps/server/package.json ./apps/server/
+
+# Install dependencies (from root to handle workspaces)
+RUN pnpm install --frozen-lockfile
 
 # Now copy the actual application source code.
-COPY src ./src
+COPY apps/server/src ./apps/server/src
+
+WORKDIR /app/apps/server
 
 # Document the port your server listens on (helpful for humans and some tooling).
 EXPOSE 8080

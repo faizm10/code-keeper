@@ -1,1 +1,15 @@
-{ "name": "@ck/worker", "version": "0.0.1", "type": "module", "scripts": { "dev": "node ./src/index.js" } }
+{
+  "name": "@ck/worker",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "node ./src/index.js"
+  },
+  "dependencies": {
+    "@ck/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.3"
+  }
+}

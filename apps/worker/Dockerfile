@@ -1,15 +1,25 @@
 # Worker image is similar to server, but it runs background jobs instead of listening on a port.
 FROM node:20-alpine
 
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
+
 WORKDIR /app
 
-# Copy dependency manifests first to cache installs.
-COPY package.json package-lock.json* ./
+# Copy workspace root files for pnpm workspace support
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
+COPY packages ./packages
 
-RUN npm ci --no-audit --no-fund
+# Copy worker dependency manifest
+COPY apps/worker/package.json ./apps/worker/
+
+# Install dependencies (from root to handle workspaces)
+RUN pnpm install --frozen-lockfile
 
 # Ship your worker code (analyzers, docgen, codemods, etc.)
-COPY src ./src
+COPY apps/worker/src ./apps/worker/src
+
+WORKDIR /app/apps/worker
 
 # Workers typically don't expose ports.
 # EXPOSE (none)
