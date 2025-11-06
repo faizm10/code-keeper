@@ -1,0 +1,28 @@
+# Node
+node_modules
+npm-debug.log
+pnpm-lock.yaml
+yarn.lock
+
+# Builds
+dist
+.next
+out
+coverage
+
+# Local env & OS junk
+.env
+.env.*
+.DS_Store
+
+# Git
+.git
+.gitignore
+
+# Editor
+.vscode
+.idea
+
+# Docker
+**/Dockerfile*
+**/docker-compose*.yml
