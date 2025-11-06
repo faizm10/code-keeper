@@ -3,7 +3,7 @@
   "private": true,
   "packageManager": "pnpm@9.0.0",
   "scripts": {
-    "dev:web": "pnpm --filter @ck/web dev",
+    "dev:web": "pnpm -C apps/web dev",
     "dev:server": "pnpm --filter @ck/server dev",
     "dev:worker": "pnpm --filter @ck/worker dev",
     "dev": "concurrently -n web,server,worker -c auto \"pnpm dev:web\" \"pnpm dev:server\" \"pnpm dev:worker\""
