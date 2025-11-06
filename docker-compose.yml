@@ -1,81 +1,54 @@
-version: "3.9"
+version: '3.8'
+
 services:
-  postgres:
-    image: postgres:16
-    environment:
-      POSTGRES_USER: ck
-      POSTGRES_PASSWORD: ck
-      POSTGRES_DB: ck
-    ports: ["5432:5432"]
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ck"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  redis:
-    image: redis:7
-    ports: ["6379:6379"]
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  server:
-    build:
-      context: .
-      dockerfile: apps/server/Dockerfile
-    env_file: .env
-    ports: ["8080:8080"]
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - ./apps/server/src:/app/apps/server/src
-      - ./packages:/app/packages
-      - /app/node_modules
-    environment:
-      - NODE_ENV=development
-
-  worker:
-    build:
-      context: .
-      dockerfile: apps/worker/Dockerfile
-    env_file: .env
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - ./apps/worker/src:/app/apps/worker/src
-      - ./packages:/app/packages
-      - /app/node_modules
-    environment:
-      - NODE_ENV=development
-
   web:
     build:
-      context: .
-      dockerfile: apps/web/Dockerfile
-    env_file: .env
-    ports: ["3000:3000"]
-    depends_on: [server]
-    volumes:
-      - ./apps/web:/app/apps/web
-      - ./packages:/app/packages
-      - /app/node_modules
-      - /app/apps/web/.next
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: code-keeper-web
+    ports:
+      - "3000:3000"
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://backend:3001
+    depends_on:
+      - backend
+    networks:
+      - code-keeper-network
+    restart: unless-stopped
 
-volumes:
-  postgres_data:
-  redis_data:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: code-keeper-backend
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+    networks:
+      - code-keeper-network
+    restart: unless-stopped
+    volumes:
+      # Mount volumes as needed for your backend
+      - ./backend:/app
+      - /app/node_modules
+
+  docs:
+    build:
+      context: ./docs
+      dockerfile: Dockerfile
+    container_name: code-keeper-docs
+    ports:
+      - "8080:80"
+    networks:
+      - code-keeper-network
+    restart: unless-stopped
+    profiles:
+      - docs
+
+networks:
+  code-keeper-network:
+    driver: bridge
+
