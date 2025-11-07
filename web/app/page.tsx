@@ -24,10 +24,10 @@ export default function Home() {
           { text: "Get Started", href: "/get-started" },
         ]}
         actions={[
-          { text: "Sign in", href: "#signin", isButton: false },
+          { text: "Sign in", href: "/auth/login", isButton: false },
           {
             text: "Get Started",
-            href: "/get-started",
+            href: "/auth/signup",
             isButton: true,
             variant: "default",
           },
@@ -116,15 +116,14 @@ export default function Home() {
         }
         buttons={[
           {
-            href: "/get-started",
+            href: "/auth/signup",
             text: "Get Started",
             variant: "default",
           },
           {
-            href: "https://github.com",
-            text: "GitHub",
-            variant: "glow",
-            icon: <Github className="mr-2 size-4" />,
+            href: "/auth/login",
+            text: "Sign In",
+            variant: "outline",
           },
         ]}
         mockup={

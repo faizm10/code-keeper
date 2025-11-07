@@ -7,12 +7,12 @@ import Link from "next/link";
 import Github from "@/components/logos/github";
 import Screenshot from "@/components/ui/screenshot";
 
-export default function LoginPage() {
+export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const supabase = createClient();
 
-  const handleGitHubLogin = async () => {
+  const handleGitHubSignup = async () => {
     setLoading(true);
     setError(null);
 
@@ -26,7 +26,7 @@ export default function LoginPage() {
 
       if (error) throw error;
     } catch (error: any) {
-      setError(error.message || "Failed to sign in with GitHub");
+      setError(error.message || "Failed to sign up with GitHub");
       setLoading(false);
     }
   };
@@ -44,10 +44,10 @@ export default function LoginPage() {
               <span className="text-xl font-bold">Code Keeper</span>
             </Link>
             <h1 className="text-4xl font-bold mb-4">
-              Keep your code organized and accessible
+              Start organizing your code today
             </h1>
             <p className="text-lg text-muted-foreground mb-8">
-              Sign in with GitHub to start managing your repositories, snippets, and development resources in one place.
+              Join developers who are already using Code Keeper to manage their repositories and code snippets more efficiently.
             </p>
           </div>
           
@@ -55,36 +55,36 @@ export default function LoginPage() {
             <div className="flex items-start gap-3">
               <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 mt-0.5">
                 <svg className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
               </div>
               <div>
-                <h3 className="font-semibold mb-1">Sync with GitHub</h3>
-                <p className="text-sm text-muted-foreground">Connect your GitHub account to access all your repositories.</p>
+                <h3 className="font-semibold mb-1">Quick Setup</h3>
+                <p className="text-sm text-muted-foreground">Get started in seconds with GitHub OAuth - no passwords to remember.</p>
               </div>
             </div>
             
             <div className="flex items-start gap-3">
               <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 mt-0.5">
                 <svg className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
               <div>
-                <h3 className="font-semibold mb-1">Organize Snippets</h3>
-                <p className="text-sm text-muted-foreground">Save and organize your code snippets with tags and categories.</p>
+                <h3 className="font-semibold mb-1">All Your Code in One Place</h3>
+                <p className="text-sm text-muted-foreground">Access all your GitHub repositories and organize them with custom tags.</p>
               </div>
             </div>
             
             <div className="flex items-start gap-3">
               <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 mt-0.5">
                 <svg className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
               <div>
-                <h3 className="font-semibold mb-1">Fast & Secure</h3>
-                <p className="text-sm text-muted-foreground">Built with modern technologies for speed and security.</p>
+                <h3 className="font-semibold mb-1">Lightning Fast</h3>
+                <p className="text-sm text-muted-foreground">Built for speed with modern architecture and optimized performance.</p>
               </div>
             </div>
           </div>
@@ -102,7 +102,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Right side - Login Form */}
+        {/* Right side - Signup Form */}
         <div className="w-full max-w-md mx-auto">
           <div className="md:hidden mb-8 text-center">
             <Link href="/" className="inline-flex items-center gap-2 mb-4">
@@ -115,9 +115,9 @@ export default function LoginPage() {
 
           <div className="bg-card border border-border rounded-lg p-8 shadow-lg">
             <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold mb-2">Welcome back</h2>
+              <h2 className="text-3xl font-bold mb-2">Create your account</h2>
               <p className="text-muted-foreground">
-                Sign in to continue to Code Keeper
+                Get started with Code Keeper in seconds
               </p>
             </div>
 
@@ -130,7 +130,7 @@ export default function LoginPage() {
             <Button
               type="button"
               className="w-full h-12 text-base"
-              onClick={handleGitHubLogin}
+              onClick={handleGitHubSignup}
               disabled={loading}
               size="lg"
             >
@@ -151,7 +151,7 @@ export default function LoginPage() {
             </Button>
 
             <p className="text-center text-sm text-muted-foreground mt-6">
-              By continuing, you agree to our{" "}
+              By creating an account, you agree to our{" "}
               <Link href="/terms" className="text-primary hover:underline">
                 Terms of Service
               </Link>{" "}
@@ -163,9 +163,9 @@ export default function LoginPage() {
           </div>
 
           <p className="text-center text-sm text-muted-foreground mt-6">
-            Don't have an account?{" "}
-            <Link href="/auth/signup" className="text-primary hover:underline font-medium">
-              Sign up
+            Already have an account?{" "}
+            <Link href="/auth/login" className="text-primary hover:underline font-medium">
+              Sign in
             </Link>
           </p>
 
