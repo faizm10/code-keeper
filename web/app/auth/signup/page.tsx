@@ -13,13 +13,15 @@ import Screenshot from "@/components/ui/screenshot";
 export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const supabase = createClient();
 
   const handleGitHubSignup = async () => {
     setLoading(true);
     setError(null);
 
     try {
+      // Create client inside the handler to avoid build-time execution
+      const supabase = createClient();
+      
       // Use production URL for production, otherwise use current origin for local dev
       const isProduction = window.location.hostname === 'code-keeper.vercel.app' || 
                           window.location.hostname === 'www.code-keeper.vercel.app';
