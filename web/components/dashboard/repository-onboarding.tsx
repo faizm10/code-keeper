@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import {
@@ -12,7 +13,6 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { cn } from '@/lib/utils'
 import {
   AlertCircle,
   CheckCircle2,
@@ -85,10 +85,6 @@ type RepositoryDetails = {
   }>
 }
 
-type FetchDetailsOptions = {
-  nextStatus?: Extract<OnboardingStatus, 'preview' | 'completed'>
-}
-
 const LOCAL_STORAGE_KEY = 'ck:repo-onboarding-status'
 
 const statusToStep: Record<Exclude<OnboardingStatus, 'initializing'>, number> = {
@@ -122,6 +118,7 @@ export function RepositoryOnboarding() {
   const [error, setError] = useState<string | null>(null)
   const [isLoadingRepos, setIsLoadingRepos] = useState(false)
   const [isLoadingDetails, setIsLoadingDetails] = useState(false)
+  const router = useRouter()
 
   const loadRepositories = useCallback(async (options?: { preserveStatus?: boolean }) => {
     setIsLoadingRepos(true)
@@ -218,8 +215,7 @@ export function RepositoryOnboarding() {
     }
   }, [])
 
-  const fetchRepositoryDetails = useCallback(
-    async (repo: RepositorySummary, options?: FetchDetailsOptions) => {
+  const fetchRepositoryDetails = useCallback(async (repo: RepositorySummary) => {
     setIsLoadingDetails(true)
     setError(null)
 
@@ -255,21 +251,19 @@ export function RepositoryOnboarding() {
 
       const data = (await response.json()) as RepositoryDetails
       setDetails(data)
-        setStatus(options?.nextStatus ?? 'preview')
+      setStatus('preview')
     } catch (err) {
       console.error(err)
       setError(err instanceof Error ? err.message : 'Unable to load repository details.')
     } finally {
       setIsLoadingDetails(false)
     }
-    },
-    [],
-  )
+  }, [])
 
   const handleSelectRepository = useCallback(
-    (repo: RepositorySummary, options?: FetchDetailsOptions) => {
+    (repo: RepositorySummary) => {
       setSelectedRepository(repo)
-      fetchRepositoryDetails(repo, options).catch((error) =>
+      fetchRepositoryDetails(repo).catch((error) =>
         console.error('Failed to fetch repository details', error),
       )
     },
@@ -281,6 +275,8 @@ export function RepositoryOnboarding() {
       window.localStorage.setItem(LOCAL_STORAGE_KEY, 'completed')
     }
     setStatus('completed')
+    setDetails(null)
+    setSelectedRepository(null)
   }, [])
 
   const handleResetOnboarding = useCallback(() => {
@@ -294,6 +290,17 @@ export function RepositoryOnboarding() {
       console.error('Failed to reload repositories', error)
     })
   }, [loadRepositories])
+
+  const navigateToRepository = useCallback(
+    (repo: RepositorySummary) => {
+      router.push(
+        `/dashboard/repositories/${encodeURIComponent(repo.owner.login)}/${encodeURIComponent(
+          repo.name,
+        )}`,
+      )
+    },
+    [router],
+  )
 
   const filteredRepositories = useMemo(() => {
     if (!search.trim()) {
@@ -586,38 +593,10 @@ export function RepositoryOnboarding() {
                   </p>
                 </div>
               </div>
-              {details && selectedRepository ? (
-                <div className="grid gap-4 text-sm text-muted-foreground sm:grid-cols-2">
-                  <div>
-                    <p className="uppercase tracking-wide text-xs text-muted-foreground/80">
-                      Currently viewing
-                    </p>
-                    <p className="text-base font-semibold text-foreground">
-                      {details.repository.fullName}
-                    </p>
-                    <p className="text-xs">
-                      Last push {formatDate(details.repository.pushedAt)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="uppercase tracking-wide text-xs text-muted-foreground/80">
-                      Default branch
-                    </p>
-                    <p className="text-base font-semibold text-foreground">
-                      {details.repository.defaultBranch}
-                    </p>
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                      <span>{details.repository.private ? 'Private' : 'Public'}</span>
-                      <span>•</span>
-                      <span>⭐ {details.repository.stars}</span>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Select a repository below to view its file tree and latest pull requests.
-                </p>
-              )}
+              <p className="text-sm text-muted-foreground">
+                Select a repository below to view a full breakdown of its file tree, pull requests,
+                and activity.
+              </p>
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -659,133 +638,59 @@ export function RepositoryOnboarding() {
               </div>
             ) : repositories.length > 0 ? (
               <div className="grid gap-4">
-                {repositories.map((repo) => {
-                  const isActive = selectedRepository?.id === repo.id
-                  return (
-                    <div
-                      key={repo.id}
-                      className={cn(
-                        'rounded-md border border-border bg-card p-4 transition hover:border-primary/60 hover:shadow-sm',
-                        isActive && 'border-primary ring-2 ring-primary/20',
-                      )}
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div>
-                          <p className="font-semibold text-foreground">{repo.fullName}</p>
-                          <Badge
-                            variant={repo.private ? 'secondary' : 'outline'}
-                            className="mt-1 text-xs"
-                          >
-                            {repo.private ? 'Private' : 'Public'}
-                          </Badge>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                          {repo.language && <span>{repo.language}</span>}
-                          {repo.language && <span>•</span>}
-                          <span>⭐ {repo.stars}</span>
-                          <span>•</span>
-                          <span>Updated {formatDate(repo.updatedAt)}</span>
-                        </div>
-                      </div>
-                      {repo.description && (
-                        <p className="mt-2 text-sm text-muted-foreground">{repo.description}</p>
-                      )}
-                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                        <span>Owner: {repo.owner.login}</span>
-                        <span>•</span>
-                        <span>ID: {repo.id}</span>
-                      </div>
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() =>
-                            handleSelectRepository(repo, { nextStatus: 'completed' })
-                          }
-                          disabled={isLoadingDetails && isActive}
+                {repositories.map((repo) => (
+                  <button
+                    key={repo.id}
+                    type="button"
+                    onClick={() => navigateToRepository(repo)}
+                    className="w-full rounded-md border border-border bg-card p-4 text-left transition hover:border-primary hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="font-semibold text-foreground">{repo.fullName}</p>
+                        <Badge
+                          variant={repo.private ? 'secondary' : 'outline'}
+                          className="mt-1 text-xs"
                         >
-                          {isLoadingDetails && isActive ? (
-                            <>
-                              <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                              Loading…
-                            </>
-                          ) : (
-                            'View details'
-                          )}
-                        </Button>
-                        <Button size="sm" variant="ghost" asChild>
-                          <Link href={repo.htmlUrl} target="_blank" rel="noreferrer">
-                            Open on GitHub
-                          </Link>
-                        </Button>
+                          {repo.private ? 'Private' : 'Public'}
+                        </Badge>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                        {repo.language && <span>{repo.language}</span>}
+                        {repo.language && <span>•</span>}
+                        <span>⭐ {repo.stars}</span>
+                        <span>•</span>
+                        <span>Updated {formatDate(repo.updatedAt)}</span>
                       </div>
                     </div>
-                  )
-                })}
+                    {repo.description && (
+                      <p className="mt-2 text-sm text-muted-foreground">{repo.description}</p>
+                    )}
+                    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      <span>Owner: {repo.owner.login}</span>
+                      <span>•</span>
+                      <span>ID: {repo.id}</span>
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-3">
+                      <span className="inline-flex items-center text-sm font-medium text-primary">
+                        View detailed insights →
+                      </span>
+                      <Link
+                        href={repo.htmlUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs text-muted-foreground hover:underline"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        Open on GitHub
+                      </Link>
+                    </div>
+                  </button>
+                ))}
               </div>
             ) : (
               <div className="rounded-md border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
                 No repositories found for your GitHub account yet.
-              </div>
-            )}
-
-            {details && selectedRepository && (
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="rounded-md border border-border bg-card p-4">
-                  <div className="flex items-center gap-2 text-sm font-semibold">
-                    <FolderTree className="h-4 w-4" />
-                    Repository Structure
-                  </div>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Showing {Math.min(details.tree.entries.length, 12)} of {details.tree.totalCount}{' '}
-                    items {details.tree.truncated && '(truncated)'}
-                  </p>
-                  <ul className="mt-3 space-y-2 text-sm font-mono">
-                    {details.tree.entries.slice(0, 12).map((node) => (
-                      <li key={node.path} className="truncate">
-                        {node.type === 'tree' ? '📁' : '📄'} {node.path}
-                        {typeof node.size === 'number' && (
-                          <span className="text-muted-foreground"> ({node.size} B)</span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div className="rounded-md border border-border bg-card p-4">
-                  <div className="flex items-center gap-2 text-sm font-semibold">
-                    <GitPullRequest className="h-4 w-4" />
-                    Pull Requests
-                  </div>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Latest {Math.min(details.pullRequests.length, 5)} pull requests from GitHub
-                  </p>
-                  <ul className="mt-3 space-y-2 text-sm">
-                    {details.pullRequests.slice(0, 5).map((pr) => (
-                      <li key={pr.id} className="rounded border border-border/70 bg-background/60 p-3">
-                        <p className="font-medium">
-                          #{pr.number} {pr.title}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {pr.state.toUpperCase()} • Opened {formatDate(pr.createdAt)} by{' '}
-                          {pr.author.login}
-                        </p>
-                        <Link
-                          href={pr.htmlUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-2 inline-flex text-xs text-primary hover:underline"
-                        >
-                          View on GitHub
-                        </Link>
-                      </li>
-                    ))}
-                    {details.pullRequests.length === 0 && (
-                      <li className="rounded border border-border/70 bg-background/60 p-3 text-xs text-muted-foreground">
-                        No pull requests found for this repository yet.
-                      </li>
-                    )}
-                  </ul>
-                </div>
               </div>
             )}
           </div>
