@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Github from "@/components/logos/github";
