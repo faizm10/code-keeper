@@ -31,6 +31,7 @@ export default function SignupPage() {
         provider: "github",
         options: {
           redirectTo: redirectUrl,
+          scopes: "repo read:user read:org user:email",
         },
       });
 

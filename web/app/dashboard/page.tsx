@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { RepositoryOnboarding } from '@/components/dashboard/repository-onboarding'
 
 // Force dynamic rendering to ensure auth check happens at runtime
 export const dynamic = 'force-dynamic'
@@ -23,6 +24,8 @@ export default async function DashboardPage() {
             Hello, {user.email || user.user_metadata?.full_name || 'User'}!
           </p>
         </div>
+
+        <RepositoryOnboarding />
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           <div className="bg-card border border-border rounded-lg p-6">
