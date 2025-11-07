@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getGitHubAccessToken } from '@/lib/github/auth'
 
 type GitHubRepoDetails = {
@@ -56,10 +56,13 @@ const headersForToken = (token: string) => ({
   'X-GitHub-Api-Version': '2022-11-28',
 })
 
+type RouteParams = { owner: string; repo: string }
+
 export async function GET(
-  _request: Request,
-  { params }: { params: { owner: string; repo: string } },
+  _request: NextRequest,
+  context: { params: RouteParams | Promise<RouteParams> },
 ) {
+  const params = await context.params
   const owner = decodeURIComponent(params.owner)
   const repo = decodeURIComponent(params.repo)
 

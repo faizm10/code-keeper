@@ -136,7 +136,16 @@ export function RepositoryOnboarding() {
 
       if (!response.ok) {
         const body = await response.json().catch(() => ({}))
-        throw new Error(body.error ?? 'Failed to load repositories')
+        const message = typeof body.error === 'string' ? body.error : 'Failed to load repositories'
+
+        if (response.status === 400 || response.status === 401) {
+          setStatus('needs-auth')
+          setRepositories([])
+          setError(message)
+          return
+        }
+
+        throw new Error(message)
       }
 
       const data = (await response.json()) as { repositories: RepositorySummary[] }
@@ -222,7 +231,16 @@ export function RepositoryOnboarding() {
 
       if (!response.ok) {
         const body = await response.json().catch(() => ({}))
-        throw new Error(body.error ?? 'Failed to load repository details')
+        const message =
+          typeof body.error === 'string' ? body.error : 'Failed to load repository details'
+
+        if (response.status === 400 || response.status === 401) {
+          setStatus('needs-auth')
+          setError(message)
+          return
+        }
+
+        throw new Error(message)
       }
 
       const data = (await response.json()) as RepositoryDetails
