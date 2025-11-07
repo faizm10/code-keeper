@@ -1,65 +1,183 @@
-import Image from "next/image";
+import Hero from "@/components/sections/hero/default";
+import Navbar from "@/components/sections/navbar/default";
+import FooterSection from "@/components/sections/footer/default";
+import Navigation from "@/components/ui/navigation";
+import Screenshot from "@/components/ui/screenshot";
+import { Badge } from "@/components/ui/badge";
+import { ArrowRightIcon } from "lucide-react";
+import Github from "@/components/logos/github";
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+    <>
+      <Navbar
+        name="Code Keeper"
+        homeUrl="/"
+        logo={
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-lg">
+            CK
+          </div>
+        }
+        mobileLinks={[
+          { text: "Features", href: "#features" },
+          { text: "Documentation", href: "/docs" },
+          { text: "Get Started", href: "#get-started" },
+        ]}
+        actions={[
+          { text: "Sign in", href: "#signin", isButton: false },
+          {
+            text: "Get Started",
+            href: "#get-started",
+            isButton: true,
+            variant: "default",
+          },
+        ]}
+        customNavigation={
+          <Navigation
+            menuItems={[
+              {
+                title: "Product",
+                content: "default",
+              },
+              {
+                title: "Resources",
+                content: "components",
+              },
+              {
+                title: "Documentation",
+                isLink: true,
+                href: "/docs",
+              },
+            ]}
+            components={[
+              {
+                title: "API Reference",
+                href: "/docs/api",
+                description: "Complete API documentation for Code Keeper endpoints.",
+              },
+              {
+                title: "Guides",
+                href: "/docs/guides",
+                description: "Step-by-step guides to help you get started.",
+              },
+              {
+                title: "Docker Setup",
+                href: "/docs/docker",
+                description: "Learn how to deploy Code Keeper with Docker.",
+              },
+              {
+                title: "Web App Guide",
+                href: "/docs/web",
+                description: "Documentation for the Next.js web application.",
+              },
+            ]}
+            logo={
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-lg">
+                CK
+              </div>
+            }
+            logoTitle="Code Keeper"
+            logoDescription="A modern platform for managing code repositories, snippets, and development resources."
+            logoHref="/"
+            introItems={[
+              {
+                title: "Features",
+                href: "#features",
+                description: "Discover what Code Keeper can do for you.",
+              },
+              {
+                title: "Getting Started",
+                href: "#get-started",
+                description: "Quick start guide to set up Code Keeper.",
+              },
+              {
+                title: "About",
+                href: "#about",
+                description: "Learn more about Code Keeper and our mission.",
+              },
+            ]}
+          />
+        }
+        showNavigation={true}
+      />
+      <Hero
+        title="Keep your code organized and accessible"
+        description="A modern platform for managing code repositories, snippets, and development resources. Built for developers who value organization and efficiency."
+        badge={
+          <Badge variant="outline">
+            <span className="text-muted-foreground">
+              New version of Code Keeper is out!
+            </span>
+            <a href="#get-started" className="flex items-center gap-1">
+              Get started
+              <ArrowRightIcon className="size-3" />
+            </a>
+          </Badge>
+        }
+        buttons={[
+          {
+            href: "#get-started",
+            text: "Get Started",
+            variant: "default",
+          },
+          {
+            href: "https://github.com",
+            text: "GitHub",
+            variant: "glow",
+            icon: <Github className="mr-2 size-4" />,
+          },
+        ]}
+        mockup={
+          <Screenshot
+            srcLight="/dashboard-placeholder.svg"
+            srcDark="/dashboard-placeholder-dark.svg"
+            alt="Code Keeper dashboard preview"
+            width={1248}
+            height={765}
+            className="w-full"
+          />
+        }
+      />
+      <FooterSection
+        name="Code Keeper"
+        logo={
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-lg">
+            CK
+          </div>
+        }
+        columns={[
+          {
+            title: "Product",
+            links: [
+              { text: "Features", href: "#features" },
+              { text: "Documentation", href: "/docs" },
+              { text: "Changelog", href: "#changelog" },
+            ],
+          },
+          {
+            title: "Resources",
+            links: [
+              { text: "Documentation", href: "/docs" },
+              { text: "API Reference", href: "/docs/api" },
+              { text: "Guides", href: "/docs/guides" },
+            ],
+          },
+          {
+            title: "Company",
+            links: [
+              { text: "About", href: "#about" },
+              { text: "Blog", href: "#blog" },
+              { text: "Contact", href: "#contact" },
+            ],
+          },
+        ]}
+        copyright="© 2025 Code Keeper. All rights reserved."
+        policies={[
+          { text: "Privacy Policy", href: "#privacy" },
+          { text: "Terms of Service", href: "#terms" },
+        ]}
+        showModeToggle={true}
+      />
+    </>
   );
 }
