@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { getSiteUrl } from '@/lib/env'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -196,8 +197,7 @@ export function RepositoryOnboarding() {
     setError(null)
     try {
       const supabase = createClient()
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
-      const redirectUrl = `${siteUrl}/auth/callback?next=/dashboard`
+      const redirectUrl = `${getSiteUrl()}/auth/callback?next=/dashboard`
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'github',
