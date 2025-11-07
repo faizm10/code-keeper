@@ -18,7 +18,9 @@ export function createClient() {
     }
   } catch {
     throw new Error(
-      `Invalid Supabase URL format: "${supabaseUrl}". Must be a valid HTTP or HTTPS URL.`
+      `Invalid Supabase URL format: "${supabaseUrl}". Must be a valid HTTP or HTTPS URL.\n` +
+      `Get your Supabase URL from: https://supabase.com/dashboard/project/_/settings/api\n` +
+      `Set it in your environment variables as NEXT_PUBLIC_SUPABASE_URL`
     )
   }
 
