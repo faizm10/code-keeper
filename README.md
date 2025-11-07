@@ -141,14 +141,44 @@ See [.cursor/rules](./.cursor/rules) for detailed coding guidelines.
 #### Web
 Create `web/.env.local`:
 ```env
+# Supabase Configuration (Required)
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+
+# Site Configuration (Optional)
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+
+# API Configuration (Optional)
 NEXT_PUBLIC_API_URL=http://localhost:3001
 ```
+
+**Getting your Supabase credentials:**
+1. Go to [Supabase Dashboard](https://supabase.com/dashboard)
+2. Select your project (or create a new one)
+3. Go to **Settings** → **API**
+4. Copy the **Project URL** (this is your `NEXT_PUBLIC_SUPABASE_URL`)
+5. Copy the **anon/public** key (this is your `NEXT_PUBLIC_SUPABASE_ANON_KEY`)
 
 #### Backend
 Create `backend/.env`:
 ```env
 NODE_ENV=development
 PORT=3001
+```
+
+#### Docker
+For Docker deployment, create a `.env` file in the project root:
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+NEXT_PUBLIC_SITE_URL=https://code-keeper.vercel.app
+```
+
+Or export them in your shell before running docker-compose:
+```bash
+export NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+export NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+docker-compose up --build
 ```
 
 ## 🐳 Docker Services

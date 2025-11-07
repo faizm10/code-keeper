@@ -22,12 +22,10 @@ export default function LoginPage() {
       // Create client inside the handler to avoid build-time execution
       const supabase = createClient();
       
-      // Use production URL for production, otherwise use current origin for local dev
-      const isProduction = window.location.hostname === 'code-keeper.vercel.app' || 
-                          window.location.hostname === 'www.code-keeper.vercel.app';
-      const redirectUrl = isProduction 
-        ? 'https://code-keeper.vercel.app/auth/callback'
-        : `${window.location.origin}/auth/callback`;
+      // Use NEXT_PUBLIC_SITE_URL from environment if available, otherwise use current origin
+      // NEXT_PUBLIC_* variables are available in client components at build time
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+      const redirectUrl = `${siteUrl}/auth/callback`;
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "github",
