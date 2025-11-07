@@ -19,15 +19,15 @@ export default function Home() {
           </div>
         }
         mobileLinks={[
-          { text: "Features", href: "#features" },
+          { text: "Features", href: "/features" },
           { text: "Documentation", href: "/docs" },
-          { text: "Get Started", href: "#get-started" },
+          { text: "Get Started", href: "/get-started" },
         ]}
         actions={[
           { text: "Sign in", href: "#signin", isButton: false },
           {
             text: "Get Started",
-            href: "#get-started",
+            href: "/get-started",
             isButton: true,
             variant: "default",
           },
@@ -82,17 +82,17 @@ export default function Home() {
             introItems={[
               {
                 title: "Features",
-                href: "#features",
+                href: "/features",
                 description: "Discover what Code Keeper can do for you.",
               },
               {
                 title: "Getting Started",
-                href: "#get-started",
+                href: "/get-started",
                 description: "Quick start guide to set up Code Keeper.",
               },
               {
                 title: "About",
-                href: "#about",
+                href: "/about",
                 description: "Learn more about Code Keeper and our mission.",
               },
             ]}
@@ -108,7 +108,7 @@ export default function Home() {
             <span className="text-muted-foreground">
               New version of Code Keeper is out!
             </span>
-            <a href="#get-started" className="flex items-center gap-1">
+            <a href="/get-started" className="flex items-center gap-1">
               Get started
               <ArrowRightIcon className="size-3" />
             </a>
@@ -116,7 +116,7 @@ export default function Home() {
         }
         buttons={[
           {
-            href: "#get-started",
+            href: "/get-started",
             text: "Get Started",
             variant: "default",
           },
@@ -149,9 +149,9 @@ export default function Home() {
           {
             title: "Product",
             links: [
-              { text: "Features", href: "#features" },
+              { text: "Features", href: "/features" },
               { text: "Documentation", href: "/docs" },
-              { text: "Changelog", href: "#changelog" },
+              { text: "Changelog", href: "/changelog" },
             ],
           },
           {
@@ -165,9 +165,9 @@ export default function Home() {
           {
             title: "Company",
             links: [
-              { text: "About", href: "#about" },
-              { text: "Blog", href: "#blog" },
-              { text: "Contact", href: "#contact" },
+              { text: "About", href: "/about" },
+              { text: "Blog", href: "/blog" },
+              { text: "Contact", href: "/contact" },
             ],
           },
         ]}
