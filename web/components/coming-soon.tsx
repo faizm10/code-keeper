@@ -5,14 +5,20 @@ import { Button } from "@/components/ui/button";
 interface ComingSoonProps {
   title?: string;
   description?: string;
+  fullHeight?: boolean;
 }
 
 export default function ComingSoon({
   title = "Coming Soon",
   description = "We're working hard to bring you this feature. Check back soon!",
+  fullHeight = true,
 }: ComingSoonProps) {
+  const containerClass = fullHeight
+    ? "min-h-screen bg-background flex items-center justify-center px-4"
+    : "bg-background flex items-center justify-center px-4 py-24";
+
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4">
+    <div className={containerClass}>
       <div className="max-w-2xl mx-auto text-center">
         <div className="mb-8">
           <h1 className="text-6xl font-bold mb-4 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
