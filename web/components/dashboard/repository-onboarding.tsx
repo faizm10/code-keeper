@@ -86,6 +86,7 @@ type RepositoryDetails = {
 }
 
 const LOCAL_STORAGE_KEY = 'ck:repo-onboarding-status'
+const PAGE_SIZE = 5
 
 const statusToStep: Record<Exclude<OnboardingStatus, 'initializing'>, number> = {
   'needs-auth': 1,
@@ -119,6 +120,7 @@ export function RepositoryOnboarding() {
   const [isLoadingRepos, setIsLoadingRepos] = useState(false)
   const [isLoadingDetails, setIsLoadingDetails] = useState(false)
   const router = useRouter()
+  const [currentPage, setCurrentPage] = useState(1)
 
   const loadRepositories = useCallback(async (options?: { preserveStatus?: boolean }) => {
     setIsLoadingRepos(true)
@@ -184,6 +186,10 @@ export function RepositoryOnboarding() {
       })
     }
   }, [loadRepositories])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search, status])
 
   const handleConnectGitHub = useCallback(async () => {
     setIsLoadingRepos(true)
@@ -312,6 +318,56 @@ export function RepositoryOnboarding() {
       return haystack.includes(query)
     })
   }, [repositories, search])
+
+  const totalPages = Math.max(1, Math.ceil(filteredRepositories.length / PAGE_SIZE))
+  const paginatedRepositories = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE
+    return filteredRepositories.slice(start, start + PAGE_SIZE)
+  }, [filteredRepositories, currentPage])
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages)
+    }
+  }, [totalPages, currentPage])
+
+  const paginationSummary = useMemo(() => {
+    if (filteredRepositories.length === 0) {
+      return null
+    }
+    const start = (currentPage - 1) * PAGE_SIZE
+    const startDisplay = start + 1
+    const endDisplay = Math.min(start + paginatedRepositories.length, filteredRepositories.length)
+    return `Showing ${startDisplay}-${endDisplay} of ${filteredRepositories.length}`
+  }, [filteredRepositories.length, paginatedRepositories.length, currentPage])
+
+  const paginationControls =
+    filteredRepositories.length > PAGE_SIZE ? (
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
+        <span>{paginationSummary}</span>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+            disabled={currentPage === 1}
+          >
+            Previous
+          </Button>
+          <span className="text-xs">
+            Page {currentPage} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+            disabled={currentPage === totalPages}
+          >
+            Next
+          </Button>
+        </div>
+      </div>
+    ) : null
 
   const currentStep = status === 'initializing' ? 1 : statusToStep[status]
   const currentTitle = status === 'initializing' ? 'Checking your setup' : statusToTitle[status]
@@ -445,7 +501,7 @@ export function RepositoryOnboarding() {
                   No repositories match your search. Try another query or refresh from GitHub.
                 </div>
               )}
-              {filteredRepositories.map((repo) => (
+              {paginatedRepositories.map((repo) => (
                 <button
                   key={repo.id}
                   type="button"
@@ -479,6 +535,7 @@ export function RepositoryOnboarding() {
                 </button>
               ))}
             </div>
+            {paginationControls}
           </div>
         )}
 
@@ -638,7 +695,7 @@ export function RepositoryOnboarding() {
               </div>
             ) : repositories.length > 0 ? (
               <div className="grid gap-4">
-                {repositories.map((repo) => (
+                {paginatedRepositories.map((repo) => (
                   <button
                     key={repo.id}
                     type="button"
@@ -693,6 +750,7 @@ export function RepositoryOnboarding() {
                 No repositories found for your GitHub account yet.
               </div>
             )}
+            {repositories.length > 0 && paginationControls}
           </div>
         )}
 

@@ -291,14 +291,16 @@ export default async function RepositoryDetailsPage({
                   Back to repositories
                 </Link>
               </Button>
-              <div className="flex flex-wrap gap-2">
-                <Badge variant={repository.private ? 'secondary' : 'outline'}>
-                  {repository.private ? 'Private' : 'Public'}
-                </Badge>
-                {repository.language && (
-                  <Badge variant="outline">{repository.language}</Badge>
-                )}
-              </div>
+              {repository && (
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant={repository.private ? 'secondary' : 'outline'}>
+                    {repository.private ? 'Private' : 'Public'}
+                  </Badge>
+                  {repository.language && (
+                    <Badge variant="outline">{repository.language}</Badge>
+                  )}
+                </div>
+              )}
             </div>
 
             {errorMessage ? (
