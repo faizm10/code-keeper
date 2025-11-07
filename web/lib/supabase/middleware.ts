@@ -7,13 +7,26 @@ export async function updateSession(request: NextRequest) {
   })
 
   // Check for required environment variables
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
+  const supabaseAnonKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY)?.trim()
 
+  // Validate that environment variables are present and URL is valid
   if (!supabaseUrl || !supabaseAnonKey) {
     // If environment variables are missing, allow the request to proceed
     // This prevents errors during development or when env vars are not set
     console.warn('Supabase environment variables are missing. Skipping authentication check.')
+    return supabaseResponse
+  }
+
+  // Validate URL format
+  try {
+    const url = new URL(supabaseUrl)
+    if (!['http:', 'https:'].includes(url.protocol)) {
+      throw new Error('Invalid protocol')
+    }
+  } catch {
+    // If URL is invalid, allow the request to proceed without authentication
+    console.warn(`Invalid Supabase URL format: ${supabaseUrl}. Skipping authentication check.`)
     return supabaseResponse
   }
 
