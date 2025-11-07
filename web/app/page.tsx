@@ -174,7 +174,7 @@ export default function Home() {
         copyright="© 2025 Code Keeper. All rights reserved."
         policies={[
           { text: "Privacy Policy", href: "/privacy" },
-          { text: "Terms of Service", href: "#terms" },
+          { text: "Terms of Service", href: "/terms" },
         ]}
         showModeToggle={true}
       />
