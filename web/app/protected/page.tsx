@@ -3,6 +3,9 @@ import { redirect } from 'next/navigation'
 import { LogoutButton } from '@/components/logout-button'
 import { createClient } from '@/lib/supabase/server'
 
+// Force dynamic rendering to ensure auth check happens at runtime
+export const dynamic = 'force-dynamic'
+
 export default async function ProtectedPage() {
   const supabase = await createClient()
 
