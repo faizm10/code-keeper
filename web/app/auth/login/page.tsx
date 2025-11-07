@@ -17,10 +17,17 @@ export default function LoginPage() {
     setError(null);
 
     try {
+      // Use production URL for production, otherwise use current origin for local dev
+      const isProduction = window.location.hostname === 'code-keeper.vercel.app' || 
+                          window.location.hostname === 'www.code-keeper.vercel.app';
+      const redirectUrl = isProduction 
+        ? 'https://code-keeper.vercel.app/auth/callback'
+        : `${window.location.origin}/auth/callback`;
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "github",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: redirectUrl,
         },
       });
 
