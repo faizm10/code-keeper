@@ -1,6 +1,16 @@
 import Link from 'next/link'
-import { notFound, redirect } from 'next/navigation'
-import { ArrowLeft, CalendarClock, GitBranch, GitPullRequest, GitFork, Layers, RefreshCcw, Star } from 'lucide-react'
+import { redirect } from 'next/navigation'
+import {
+  AlertCircle,
+  ArrowLeft,
+  CalendarClock,
+  GitBranch,
+  GitPullRequest,
+  GitFork,
+  Layers,
+  RefreshCcw,
+  Star,
+} from 'lucide-react'
 
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
@@ -222,6 +232,7 @@ export default async function RepositoryDetailsPage({
   const repo = decodeURIComponent(params.repo)
 
   let repositoryDetails: RepositoryDetailsResponse | null = null
+  let errorMessage: string | null = null
 
   try {
     repositoryDetails = await fetchRepositoryDetails(owner, repo)
@@ -229,37 +240,44 @@ export default async function RepositoryDetailsPage({
     if (error instanceof GitHubAuthError) {
       redirect('/dashboard?githubReconnect=1')
     }
-    throw error
+    errorMessage =
+      error instanceof Error
+        ? error.message
+        : 'Something went wrong while loading the repository from GitHub.'
   }
 
-  if (!repositoryDetails) {
-    notFound()
+  if (!repositoryDetails && !errorMessage) {
+    errorMessage = 'We could not find this repository or you do not have access to it.'
   }
 
-  const { repository, tree, pullRequests } = repositoryDetails
+  const repository = repositoryDetails?.repository
+  const tree = repositoryDetails?.tree
+  const pullRequests = repositoryDetails?.pullRequests ?? []
 
-  const stats = [
-    {
-      label: 'Stars',
-      value: repository.stars,
-      icon: Star,
-    },
-    {
-      label: 'Forks',
-      value: repository.forks,
-      icon: GitFork,
-    },
-    {
-      label: 'Open issues',
-      value: repository.openIssues,
-      icon: RefreshCcw,
-    },
-    {
-      label: 'Default branch',
-      value: repository.defaultBranch,
-      icon: GitBranch,
-    },
-  ]
+  const stats = repository
+    ? [
+        {
+          label: 'Stars',
+          value: repository.stars,
+          icon: Star,
+        },
+        {
+          label: 'Forks',
+          value: repository.forks,
+          icon: GitFork,
+        },
+        {
+          label: 'Open issues',
+          value: repository.openIssues,
+          icon: RefreshCcw,
+        },
+        {
+          label: 'Default branch',
+          value: repository.defaultBranch,
+          icon: GitBranch,
+        },
+      ]
+    : []
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -283,143 +301,171 @@ export default async function RepositoryDetailsPage({
               </div>
             </div>
 
-            <div className="flex flex-col gap-4">
-              <div>
-                <p className="text-sm uppercase tracking-wide text-muted-foreground">
-                  Repository
-                </p>
-                <h1 className="text-3xl font-bold">{repository.fullName}</h1>
-              </div>
-              {repository.description && (
-                <p className="text-lg text-muted-foreground">{repository.description}</p>
-              )}
-              <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                <span>Last push {formatDate(repository.pushedAt)}</span>
-                <span>•</span>
-                <span>Owner: {repository.owner.login}</span>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                <Button asChild>
-                  <Link href={repository.htmlUrl} target="_blank" rel="noreferrer">
-                    View on GitHub
-                  </Link>
-                </Button>
-              </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {stats.map(({ label, value, icon: Icon }) => (
-                <div
-                  key={label}
-                  className="rounded-lg border border-border bg-card p-4 shadow-sm"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">{label}</p>
-                      <p className="text-xl font-semibold">{value}</p>
+            {errorMessage ? (
+              <div className="space-y-6 rounded-lg border border-destructive/40 bg-destructive/5 p-6 text-sm">
+                <div className="flex items-start gap-3 text-destructive">
+                  <AlertCircle className="h-5 w-5 flex-none" />
+                  <div className="space-y-2">
+                    <p className="font-medium text-destructive">
+                      Unable to load repository details
+                    </p>
+                    <p className="text-destructive/80">
+                      {errorMessage}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="outline" asChild size="sm">
+                        <Link href="/dashboard">Back to dashboard</Link>
+                      </Button>
+                      <Button variant="outline" asChild size="sm">
+                        <Link href="https://github.com/apps" target="_blank" rel="noreferrer">
+                          Check GitHub access
+                        </Link>
+                      </Button>
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
-
-            <div className="grid gap-6 lg:grid-cols-2">
-              <div className="space-y-4 rounded-lg border border-border bg-card p-6 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Layers className="h-5 w-5 text-primary" />
-                    <h2 className="text-lg font-semibold">Repository structure</h2>
-                  </div>
-                  <span className="text-xs text-muted-foreground">
-                    Showing {Math.min(tree.entries.length, 25)} of {tree.totalCount}{' '}
-                    {tree.truncated && '(truncated)'}
-                  </span>
-                </div>
-                <div className="rounded-md border border-border bg-muted/30">
-                  <ul className="divide-y divide-border text-sm font-mono">
-                    {tree.entries.slice(0, 25).map((node) => (
-                      <li key={node.path} className="px-4 py-2">
-                        <span className="mr-2">{node.type === 'tree' ? '📁' : '📄'}</span>
-                        {node.path}
-                        {typeof node.size === 'number' && (
-                          <span className="ml-2 text-xs text-muted-foreground">
-                            ({node.size} B)
-                          </span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
               </div>
-
-              <div className="space-y-4 rounded-lg border border-border bg-card p-6 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <GitPullRequest className="h-5 w-5 text-primary" />
-                    <h2 className="text-lg font-semibold">Pull requests</h2>
+            ) : repository && tree ? (
+              <>
+                <div className="flex flex-col gap-4">
+                  <div>
+                    <p className="text-sm uppercase tracking-wide text-muted-foreground">
+                      Repository
+                    </p>
+                    <h1 className="text-3xl font-bold">{repository.fullName}</h1>
                   </div>
-                  <span className="text-xs text-muted-foreground">
-                    Latest {Math.min(pullRequests.length, 10)}
-                  </span>
+                  {repository.description && (
+                    <p className="text-lg text-muted-foreground">{repository.description}</p>
+                  )}
+                  <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                    <span>Last push {formatDate(repository.pushedAt)}</span>
+                    <span>•</span>
+                    <span>Owner: {repository.owner.login}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    <Button asChild>
+                      <Link href={repository.htmlUrl} target="_blank" rel="noreferrer">
+                        View on GitHub
+                      </Link>
+                    </Button>
+                  </div>
                 </div>
-                {pullRequests.length === 0 ? (
-                  <div className="rounded-md border border-border bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
-                    No pull requests found for this repository yet.
-                  </div>
-                ) : (
-                  <ul className="space-y-3">
-                    {pullRequests.slice(0, 10).map((pr) => (
-                      <li
-                        key={pr.id}
-                        className="rounded-md border border-border bg-background/80 p-4"
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <p className="font-semibold">
-                            #{pr.number} {pr.title}
-                          </p>
-                          <Badge variant="outline" className="text-xs">
-                            {pr.state.toUpperCase()}
-                          </Badge>
+
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {stats.map(({ label, value, icon: Icon }) => (
+                    <div
+                      key={label}
+                      className="rounded-lg border border-border bg-card p-4 shadow-sm"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                          <Icon className="h-5 w-5" />
                         </div>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Created {formatDate(pr.createdAt)} by {pr.author.login}
-                          {pr.mergedAt && ` • merged ${formatDate(pr.mergedAt)}`}
-                        </p>
-                        <div className="mt-3 flex flex-wrap gap-3 text-xs">
-                          <Link
-                            href={pr.htmlUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-primary hover:underline"
+                        <div>
+                          <p className="text-sm text-muted-foreground">{label}</p>
+                          <p className="text-xl font-semibold">{value}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <div className="space-y-4 rounded-lg border border-border bg-card p-6 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Layers className="h-5 w-5 text-primary" />
+                        <h2 className="text-lg font-semibold">Repository structure</h2>
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        Showing {Math.min(tree.entries.length, 25)} of {tree.totalCount}{' '}
+                        {tree.truncated && '(truncated)'}
+                      </span>
+                    </div>
+                    <div className="rounded-md border border-border bg-muted/30">
+                      <ul className="divide-y divide-border text-sm font-mono">
+                        {tree.entries.slice(0, 25).map((node) => (
+                          <li key={node.path} className="px-4 py-2">
+                            <span className="mr-2">{node.type === 'tree' ? '📁' : '📄'}</span>
+                            {node.path}
+                            {typeof node.size === 'number' && (
+                              <span className="ml-2 text-xs text-muted-foreground">
+                                ({node.size} B)
+                              </span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 rounded-lg border border-border bg-card p-6 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <GitPullRequest className="h-5 w-5 text-primary" />
+                        <h2 className="text-lg font-semibold">Pull requests</h2>
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        Latest {Math.min(pullRequests.length, 10)}
+                      </span>
+                    </div>
+                    {pullRequests.length === 0 ? (
+                      <div className="rounded-md border border-border bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
+                        No pull requests found for this repository yet.
+                      </div>
+                    ) : (
+                      <ul className="space-y-3">
+                        {pullRequests.slice(0, 10).map((pr) => (
+                          <li
+                            key={pr.id}
+                            className="rounded-md border border-border bg-background/80 p-4"
                           >
-                            View on GitHub
-                          </Link>
-                          <span className="text-muted-foreground">
-                            Updated {formatDate(pr.updatedAt)}
-                          </span>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
-
-            <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
-              <div className="flex flex-wrap items-center gap-3">
-                <CalendarClock className="h-5 w-5 text-primary" />
-                <div>
-                  <p className="font-semibold">Need more detail?</p>
-                  <p className="text-sm text-muted-foreground">
-                    We only show a subset of the file tree and the 20 most recent pull requests.
-                    For full insights, open the repository on GitHub or adjust this view in future releases.
-                  </p>
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <p className="font-semibold">
+                                #{pr.number} {pr.title}
+                              </p>
+                              <Badge variant="outline" className="text-xs">
+                                {pr.state.toUpperCase()}
+                              </Badge>
+                            </div>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              Created {formatDate(pr.createdAt)} by {pr.author.login}
+                              {pr.mergedAt && ` • merged ${formatDate(pr.mergedAt)}`}
+                            </p>
+                            <div className="mt-3 flex flex-wrap gap-3 text-xs">
+                              <Link
+                                href={pr.htmlUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-primary hover:underline"
+                              >
+                                View on GitHub
+                              </Link>
+                              <span className="text-muted-foreground">
+                                Updated {formatDate(pr.updatedAt)}
+                              </span>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </div>
+
+                <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <CalendarClock className="h-5 w-5 text-primary" />
+                    <div>
+                      <p className="font-semibold">Need more detail?</p>
+                      <p className="text-sm text-muted-foreground">
+                        We only show a subset of the file tree and the 20 most recent pull requests.
+                        For full insights, open the repository on GitHub or adjust this view in future releases.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : null}
           </div>
         </div>
       </div>
