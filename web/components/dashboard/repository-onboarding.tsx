@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 import {
   AlertCircle,
   CheckCircle2,
@@ -84,6 +85,10 @@ type RepositoryDetails = {
   }>
 }
 
+type FetchDetailsOptions = {
+  nextStatus?: Extract<OnboardingStatus, 'preview' | 'completed'>
+}
+
 const LOCAL_STORAGE_KEY = 'ck:repo-onboarding-status'
 
 const statusToStep: Record<Exclude<OnboardingStatus, 'initializing'>, number> = {
@@ -118,7 +123,7 @@ export function RepositoryOnboarding() {
   const [isLoadingRepos, setIsLoadingRepos] = useState(false)
   const [isLoadingDetails, setIsLoadingDetails] = useState(false)
 
-  const loadRepositories = useCallback(async () => {
+  const loadRepositories = useCallback(async (options?: { preserveStatus?: boolean }) => {
     setIsLoadingRepos(true)
     setError(null)
 
@@ -151,9 +156,11 @@ export function RepositoryOnboarding() {
       const data = (await response.json()) as { repositories: RepositorySummary[] }
       setRepositories(data.repositories)
       if (data.repositories.length === 0) {
-        setStatus('select')
         setError('No repositories found for your GitHub account.')
-      } else {
+        if (!options?.preserveStatus) {
+          setStatus('select')
+        }
+      } else if (!options?.preserveStatus) {
         setStatus('select')
       }
     } catch (err) {
@@ -171,12 +178,14 @@ export function RepositoryOnboarding() {
     const storedStatus = window.localStorage.getItem(LOCAL_STORAGE_KEY)
     if (storedStatus === 'completed') {
       setStatus('completed')
-      return
+      loadRepositories({ preserveStatus: true }).catch((error) => {
+        console.error('Failed to load repositories', error)
+      })
+    } else {
+      loadRepositories().catch((error) => {
+        console.error('Failed to load repositories', error)
+      })
     }
-
-    loadRepositories().catch((error) => {
-      console.error('Failed to load repositories', error)
-    })
   }, [loadRepositories])
 
   const handleConnectGitHub = useCallback(async () => {
@@ -209,7 +218,8 @@ export function RepositoryOnboarding() {
     }
   }, [])
 
-  const fetchRepositoryDetails = useCallback(async (repo: RepositorySummary) => {
+  const fetchRepositoryDetails = useCallback(
+    async (repo: RepositorySummary, options?: FetchDetailsOptions) => {
     setIsLoadingDetails(true)
     setError(null)
 
@@ -245,19 +255,21 @@ export function RepositoryOnboarding() {
 
       const data = (await response.json()) as RepositoryDetails
       setDetails(data)
-      setStatus('preview')
+        setStatus(options?.nextStatus ?? 'preview')
     } catch (err) {
       console.error(err)
       setError(err instanceof Error ? err.message : 'Unable to load repository details.')
     } finally {
       setIsLoadingDetails(false)
     }
-  }, [])
+    },
+    [],
+  )
 
   const handleSelectRepository = useCallback(
-    (repo: RepositorySummary) => {
+    (repo: RepositorySummary, options?: FetchDetailsOptions) => {
       setSelectedRepository(repo)
-      fetchRepositoryDetails(repo).catch((error) =>
+      fetchRepositoryDetails(repo, options).catch((error) =>
         console.error('Failed to fetch repository details', error),
       )
     },
@@ -376,7 +388,11 @@ export function RepositoryOnboarding() {
                   'Connect GitHub'
                 )}
               </Button>
-              <Button variant="outline" onClick={loadRepositories} disabled={isLoadingRepos}>
+              <Button
+                variant="outline"
+                onClick={() => loadRepositories()}
+                disabled={isLoadingRepos}
+              >
                 <RefreshCcw className="mr-2 h-4 w-4" />
                 I already connected
               </Button>
@@ -392,7 +408,12 @@ export function RepositoryOnboarding() {
                 from the repositories section.
               </p>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={loadRepositories} disabled={isLoadingRepos}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => loadRepositories()}
+                  disabled={isLoadingRepos}
+                >
                   <RefreshCcw className="mr-2 h-4 w-4" />
                   Refresh
                 </Button>
@@ -550,38 +571,223 @@ export function RepositoryOnboarding() {
           </div>
         )}
 
-        {status === 'completed' && details && selectedRepository && (
-          <div className="space-y-4 rounded-md border border-emerald-500/40 bg-emerald-500/5 p-6">
-            <div className="flex items-center gap-3 text-emerald-600">
-              <CheckCircle2 className="h-5 w-5" />
-              <p className="font-medium">
-                {details.repository.fullName} is now connected. We&apos;ll keep its structure and
-                pull requests in sync.
-              </p>
+        {status === 'completed' && (
+          <div className="space-y-6">
+            <div className="space-y-3 rounded-md border border-emerald-500/40 bg-emerald-500/5 p-6">
+              <div className="flex items-start gap-3 text-emerald-600">
+                <CheckCircle2 className="h-5 w-5 flex-none" />
+                <div className="space-y-1">
+                  <p className="font-medium text-emerald-700 dark:text-emerald-300">
+                    Repository syncing enabled
+                  </p>
+                  <p className="text-sm text-emerald-700/80 dark:text-emerald-200/80">
+                    Your GitHub repositories are now accessible directly from the dashboard. Select
+                    any repository below to inspect its structure and pull requests.
+                  </p>
+                </div>
+              </div>
+              {details && selectedRepository ? (
+                <div className="grid gap-4 text-sm text-muted-foreground sm:grid-cols-2">
+                  <div>
+                    <p className="uppercase tracking-wide text-xs text-muted-foreground/80">
+                      Currently viewing
+                    </p>
+                    <p className="text-base font-semibold text-foreground">
+                      {details.repository.fullName}
+                    </p>
+                    <p className="text-xs">
+                      Last push {formatDate(details.repository.pushedAt)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="uppercase tracking-wide text-xs text-muted-foreground/80">
+                      Default branch
+                    </p>
+                    <p className="text-base font-semibold text-foreground">
+                      {details.repository.defaultBranch}
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                      <span>{details.repository.private ? 'Private' : 'Public'}</span>
+                      <span>•</span>
+                      <span>⭐ {details.repository.stars}</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Select a repository below to view its file tree and latest pull requests.
+                </p>
+              )}
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
+
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-sm text-muted-foreground">Repository</p>
-                <p className="font-medium">{details.repository.fullName}</p>
-                <p className="text-xs text-muted-foreground">
-                  Last push {formatDate(details.repository.pushedAt)}
+                <p className="text-lg font-semibold">Your repositories</p>
+                <p className="text-sm text-muted-foreground">
+                  Browse all repositories we can access with your GitHub connection.
                 </p>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Default branch</p>
-                <p className="font-medium">{details.repository.defaultBranch}</p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => loadRepositories({ preserveStatus: true })}
+                  disabled={isLoadingRepos}
+                >
+                  {isLoadingRepos ? (
+                    <>
+                      <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                      Refreshing…
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCcw className="mr-2 h-3.5 w-3.5" />
+                      Refresh list
+                    </>
+                  )}
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleResetOnboarding}>
+                  Reset onboarding
+                </Button>
               </div>
             </div>
-            <div className="flex flex-wrap gap-3">
-              <Link href={details.repository.htmlUrl} target="_blank" rel="noreferrer">
-                <Button size="sm" variant="outline">
-                  View repository
-                </Button>
-              </Link>
-              <Button size="sm" variant="outline" onClick={handleResetOnboarding}>
-                Reset onboarding
-              </Button>
-            </div>
+
+            {isLoadingRepos ? (
+              <div className="flex items-center gap-3 rounded-md border border-border bg-muted/30 p-4 text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Loading repositories…</span>
+              </div>
+            ) : repositories.length > 0 ? (
+              <div className="grid gap-4">
+                {repositories.map((repo) => {
+                  const isActive = selectedRepository?.id === repo.id
+                  return (
+                    <div
+                      key={repo.id}
+                      className={cn(
+                        'rounded-md border border-border bg-card p-4 transition hover:border-primary/60 hover:shadow-sm',
+                        isActive && 'border-primary ring-2 ring-primary/20',
+                      )}
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <p className="font-semibold text-foreground">{repo.fullName}</p>
+                          <Badge
+                            variant={repo.private ? 'secondary' : 'outline'}
+                            className="mt-1 text-xs"
+                          >
+                            {repo.private ? 'Private' : 'Public'}
+                          </Badge>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                          {repo.language && <span>{repo.language}</span>}
+                          {repo.language && <span>•</span>}
+                          <span>⭐ {repo.stars}</span>
+                          <span>•</span>
+                          <span>Updated {formatDate(repo.updatedAt)}</span>
+                        </div>
+                      </div>
+                      {repo.description && (
+                        <p className="mt-2 text-sm text-muted-foreground">{repo.description}</p>
+                      )}
+                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                        <span>Owner: {repo.owner.login}</span>
+                        <span>•</span>
+                        <span>ID: {repo.id}</span>
+                      </div>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            handleSelectRepository(repo, { nextStatus: 'completed' })
+                          }
+                          disabled={isLoadingDetails && isActive}
+                        >
+                          {isLoadingDetails && isActive ? (
+                            <>
+                              <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                              Loading…
+                            </>
+                          ) : (
+                            'View details'
+                          )}
+                        </Button>
+                        <Button size="sm" variant="ghost" asChild>
+                          <Link href={repo.htmlUrl} target="_blank" rel="noreferrer">
+                            Open on GitHub
+                          </Link>
+                        </Button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="rounded-md border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+                No repositories found for your GitHub account yet.
+              </div>
+            )}
+
+            {details && selectedRepository && (
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-md border border-border bg-card p-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold">
+                    <FolderTree className="h-4 w-4" />
+                    Repository Structure
+                  </div>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Showing {Math.min(details.tree.entries.length, 12)} of {details.tree.totalCount}{' '}
+                    items {details.tree.truncated && '(truncated)'}
+                  </p>
+                  <ul className="mt-3 space-y-2 text-sm font-mono">
+                    {details.tree.entries.slice(0, 12).map((node) => (
+                      <li key={node.path} className="truncate">
+                        {node.type === 'tree' ? '📁' : '📄'} {node.path}
+                        {typeof node.size === 'number' && (
+                          <span className="text-muted-foreground"> ({node.size} B)</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="rounded-md border border-border bg-card p-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold">
+                    <GitPullRequest className="h-4 w-4" />
+                    Pull Requests
+                  </div>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Latest {Math.min(details.pullRequests.length, 5)} pull requests from GitHub
+                  </p>
+                  <ul className="mt-3 space-y-2 text-sm">
+                    {details.pullRequests.slice(0, 5).map((pr) => (
+                      <li key={pr.id} className="rounded border border-border/70 bg-background/60 p-3">
+                        <p className="font-medium">
+                          #{pr.number} {pr.title}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {pr.state.toUpperCase()} • Opened {formatDate(pr.createdAt)} by{' '}
+                          {pr.author.login}
+                        </p>
+                        <Link
+                          href={pr.htmlUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-2 inline-flex text-xs text-primary hover:underline"
+                        >
+                          View on GitHub
+                        </Link>
+                      </li>
+                    ))}
+                    {details.pullRequests.length === 0 && (
+                      <li className="rounded border border-border/70 bg-background/60 p-3 text-xs text-muted-foreground">
+                        No pull requests found for this repository yet.
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
