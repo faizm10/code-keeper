@@ -102,7 +102,7 @@ export default function Home() {
       />
       <Hero
         title="Automatically maintain your docs and architecture"
-        description="Think of it like a junior dev that maintains your project automatically. Code Keeper updates documentation, performs safe refactors, and keeps your codebase aligned in real-time."
+        description="Code Keeper is an automated maintenance system that continuously updates documentation, performs safe refactoring operations, and maintains architectural alignment in real-time. The system operates as an autonomous agent that ensures your project remains well-documented and structurally consistent."
         badge={
           <Badge variant="outline">
             <span className="text-muted-foreground">
@@ -142,9 +142,9 @@ export default function Home() {
       <section className="py-24 bg-muted/50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold mb-4">✅ What It Does (Simple)</h2>
+            <h2 className="text-3xl font-bold mb-4">Core Functionality</h2>
             <p className="text-lg text-muted-foreground">
-              Whenever you push code, Code Keeper will:
+              When code is pushed to your repository, Code Keeper automatically performs the following operations:
             </p>
           </div>
           
@@ -213,8 +213,8 @@ export default function Home() {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="font-semibold mb-1">Open PR</h3>
-                  <p className="text-sm text-muted-foreground">Creates a pull request with all the changes</p>
+                  <h3 className="font-semibold mb-1">Generate Pull Request</h3>
+                  <p className="text-sm text-muted-foreground">Creates a pull request containing all proposed changes for review</p>
                 </div>
               </div>
             </div>
@@ -228,7 +228,7 @@ export default function Home() {
                 </div>
                 <div>
                   <h3 className="font-semibold mb-1">Safe by Default</h3>
-                  <p className="text-sm text-muted-foreground">No commits directly to main — everything via PR</p>
+                  <p className="text-sm text-muted-foreground">No direct commits to the main branch. All changes are proposed through pull requests</p>
                 </div>
               </div>
             </div>
@@ -236,7 +236,7 @@ export default function Home() {
 
           <div className="mt-12 text-center">
             <div className="inline-block bg-primary/10 border border-primary/20 rounded-lg p-6 max-w-2xl">
-              <p className="text-lg font-medium mb-2">Think of it like a junior dev that maintains your project automatically.</p>
+              <p className="text-lg font-medium mb-2">Code Keeper functions as an automated maintenance system that continuously maintains your project documentation and architecture.</p>
             </div>
           </div>
         </div>
@@ -246,9 +246,9 @@ export default function Home() {
       <section className="py-24">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold mb-4">✨ Why?</h2>
+            <h2 className="text-3xl font-bold mb-4">Problem Statement</h2>
             <p className="text-lg text-muted-foreground mb-8">
-              Most repos suffer from common maintenance issues
+              Most software repositories encounter common maintenance challenges that impact long-term project health
             </p>
           </div>
 
@@ -293,9 +293,9 @@ export default function Home() {
       <section className="py-24 bg-muted/50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold mb-4">🔧 High-Level Architecture</h2>
+            <h2 className="text-3xl font-bold mb-4">System Architecture</h2>
             <p className="text-lg text-muted-foreground">
-              How Code Keeper works under the hood
+              Overview of Code Keeper's operational workflow
             </p>
           </div>
 
@@ -306,8 +306,8 @@ export default function Home() {
                   1
                 </div>
                 <div>
-                  <h3 className="font-semibold mb-2">GitHub App receives push / PR events</h3>
-                  <p className="text-sm text-muted-foreground">Monitors your repository for code changes</p>
+                  <h3 className="font-semibold mb-2">GitHub Application Event Reception</h3>
+                  <p className="text-sm text-muted-foreground">Monitors repository for push and pull request events</p>
                 </div>
               </div>
             </div>
@@ -318,8 +318,8 @@ export default function Home() {
                   2
                 </div>
                 <div>
-                  <h3 className="font-semibold mb-2">Analyzer inspects changed code</h3>
-                  <p className="text-sm text-muted-foreground">Identifies what files, functions, and structures were modified</p>
+                  <h3 className="font-semibold mb-2">Code Analysis Engine</h3>
+                  <p className="text-sm text-muted-foreground">Analyzes modified files, functions, and structural changes</p>
                 </div>
               </div>
             </div>
@@ -330,8 +330,8 @@ export default function Home() {
                   3
                 </div>
                 <div>
-                  <h3 className="font-semibold mb-2">Docs engine updates reference + markdown files</h3>
-                  <p className="text-sm text-muted-foreground">Automatically updates README, API docs, and changelog</p>
+                  <h3 className="font-semibold mb-2">Documentation Engine</h3>
+                  <p className="text-sm text-muted-foreground">Automatically updates reference documentation and markdown files including README, API documentation, and changelog</p>
                 </div>
               </div>
             </div>
@@ -342,8 +342,8 @@ export default function Home() {
                   4
                 </div>
                 <div>
-                  <h3 className="font-semibold mb-2">Refactor engine applies safe codemods</h3>
-                  <p className="text-sm text-muted-foreground">Performs safe transformations like renaming and file moves</p>
+                  <h3 className="font-semibold mb-2">Refactoring Engine</h3>
+                  <p className="text-sm text-muted-foreground">Applies safe code transformations including renaming operations and file relocations</p>
                 </div>
               </div>
             </div>
@@ -354,8 +354,8 @@ export default function Home() {
                   5
                 </div>
                 <div>
-                  <h3 className="font-semibold mb-2">Test runner executes existing tests</h3>
-                  <p className="text-sm text-muted-foreground">Runs your test suite to ensure nothing broke</p>
+                  <h3 className="font-semibold mb-2">Test Execution Engine</h3>
+                  <p className="text-sm text-muted-foreground">Executes the existing test suite to verify that no regressions were introduced</p>
                 </div>
               </div>
             </div>
@@ -366,8 +366,8 @@ export default function Home() {
                   6
                 </div>
                 <div>
-                  <h3 className="font-semibold mb-2">PR bot opens a pull request</h3>
-                  <p className="text-sm text-muted-foreground">Creates a PR with all the changes for your review</p>
+                  <h3 className="font-semibold mb-2">Pull Request Generation</h3>
+                  <p className="text-sm text-muted-foreground">Creates a pull request containing all proposed changes for review and approval</p>
                 </div>
               </div>
             </div>
@@ -376,7 +376,7 @@ export default function Home() {
           <div className="mt-12 text-center">
             <div className="inline-block bg-card border border-border rounded-lg p-6">
               <p className="text-sm text-muted-foreground">
-                <strong>Everything is containerized with Docker</strong> for easy deployment and scaling
+                <strong>The entire system is containerized using Docker</strong> to facilitate deployment and horizontal scaling
               </p>
             </div>
           </div>
