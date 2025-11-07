@@ -55,15 +55,14 @@ export default function Hero({
   ),
   buttons = [
     {
-      href: "https://www.launchuicomponents.com/",
+      href: "/auth/signup",
       text: "Get Started",
       variant: "default",
     },
     {
-      href: "https://www.launchuicomponents.com/",
-      text: "Github",
-      variant: "glow",
-      icon: <Github className="mr-2 size-4" />,
+      href: "/auth/login",
+      text: "Sign In",
+      variant: "outline",
     },
   ],
   className,
