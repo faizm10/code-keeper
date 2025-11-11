@@ -101,6 +101,8 @@ type RepositoryDetailsResponse = {
 }
 
 const MAX_TREE_ENTRIES = 200
+const MAX_PULL_REQUEST_PAGES = 5
+const PULL_REQUESTS_PER_PAGE = 100
 function buildRepositoryTree(entries: GitHubTreeNode[]): RepositoryTreeNode[] {
   type InternalNode = {
     name: string
@@ -230,16 +232,13 @@ async function fetchRepositoryDetails(owner: string, repo: string): Promise<Repo
 
   const repoData = (await repoResponse.json()) as GitHubRepoDetails
 
-  const [treeResponse, pullsResponse] = await Promise.all([
-    fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(repoData.default_branch)}?recursive=1`, {
+  const treeResponse = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(repoData.default_branch)}?recursive=1`,
+    {
       headers,
       cache: 'no-store',
-    }),
-    fetch(`https://api.github.com/repos/${owner}/${repo}/pulls?state=all&per_page=20`, {
-      headers,
-      cache: 'no-store',
-    }),
-  ])
+    },
+  )
 
   let treeEntries: GitHubTreeNode[] = []
   let treeTruncated = false
@@ -251,10 +250,7 @@ async function fetchRepositoryDetails(owner: string, repo: string): Promise<Repo
     treeEntries = entries.slice(0, MAX_TREE_ENTRIES)
   }
 
-  let pullRequests: GitHubPullRequest[] = []
-  if (pullsResponse.ok) {
-    pullRequests = (await pullsResponse.json()) as GitHubPullRequest[]
-  }
+  const pullRequests = await fetchAllPullRequests(owner, repo, headers)
 
   return {
     repository: {
@@ -296,6 +292,34 @@ async function fetchRepositoryDetails(owner: string, repo: string): Promise<Repo
       },
     })),
   }
+}
+
+async function fetchAllPullRequests(owner: string, repo: string, headers: HeadersInit): Promise<GitHubPullRequest[]> {
+  const allPulls: GitHubPullRequest[] = []
+
+  for (let page = 1; page <= MAX_PULL_REQUEST_PAGES; page += 1) {
+    const response = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/pulls?state=all&per_page=${PULL_REQUESTS_PER_PAGE}&page=${page}`,
+      {
+        headers,
+        cache: 'no-store',
+      },
+    )
+
+    if (!response.ok) {
+      console.error('Failed to load repository pull requests', response.status)
+      break
+    }
+
+    const pullsPage = (await response.json()) as GitHubPullRequest[]
+    allPulls.push(...pullsPage)
+
+    if (pullsPage.length < PULL_REQUESTS_PER_PAGE) {
+      break
+    }
+  }
+
+  return allPulls
 }
 
 function formatDate(value: string) {
