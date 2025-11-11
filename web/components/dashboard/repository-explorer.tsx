@@ -256,7 +256,7 @@ export function RepositoryExplorer({
         </div>
       </div>
 
-      <div className="flex min-h-[24rem] flex-col rounded-lg border border-border bg-card shadow-sm">
+      <div className="rounded-lg border border-border bg-card shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-6 py-4">
           <div className="flex flex-col">
             <h2 className="text-lg font-semibold">File preview</h2>
@@ -279,21 +279,21 @@ export function RepositoryExplorer({
             </Link>
           )}
         </div>
-        <div className="relative flex-1 overflow-hidden px-6 py-4">
+        <div className="relative px-6 py-4">
           {fileState.status === 'idle' && (
-            <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+            <div className="flex min-h-[8rem] items-center justify-center text-sm text-muted-foreground">
               Select a file from the tree to preview its contents.
             </div>
           )}
           {fileState.status === 'error' && (
-            <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-sm text-destructive">
+          <div className="flex min-h-[8rem] flex-col items-center justify-center gap-3 text-center text-sm text-destructive">
               <AlertCircle className="h-5 w-5" />
               <p>{fileState.message}</p>
             </div>
           )}
           {fileState.status === 'loaded' && (
-            <div className="h-full overflow-hidden rounded-md border border-border bg-muted/40">
-              <pre className="h-full overflow-auto p-4">
+          <div className="overflow-hidden rounded-md border border-border bg-muted/40">
+            <pre className="max-h-[60vh] overflow-auto p-4">
                 <code
                   className={`language-${fileInfo?.language ?? 'typescript'} block`}
                   style={{ whiteSpace: 'pre' }}
@@ -304,10 +304,10 @@ export function RepositoryExplorer({
             </div>
           )}
         {fileState.status === 'loading' && (
-          <div className="h-full rounded-md border border-dashed border-border/60 bg-muted/20" />
+          <div className="min-h-[8rem] rounded-md border border-dashed border-border/60 bg-muted/20" />
         )}
         {isLoading && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-background/70 backdrop-blur-sm">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-lg bg-background/70 backdrop-blur-sm">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
             <span className="text-xs text-muted-foreground">Loading file contents...</span>
           </div>
