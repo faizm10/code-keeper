@@ -5,9 +5,7 @@ import {
   ArrowLeft,
   CalendarClock,
   GitBranch,
-  GitPullRequest,
   GitFork,
-  Layers,
   RefreshCcw,
   Star,
 } from 'lucide-react'
@@ -17,6 +15,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { DashboardFooter } from '@/components/dashboard/dashboard-footer'
 import { getGitHubAccessToken } from '@/lib/github/auth'
+import type { RepositoryTreeNode } from '@/components/dashboard/repository-tree'
+import { RepositoryExplorer } from '@/components/dashboard/repository-explorer'
 
 type GitHubRepoDetails = {
   name: string
@@ -101,6 +101,102 @@ type RepositoryDetailsResponse = {
 }
 
 const MAX_TREE_ENTRIES = 200
+const MAX_PULL_REQUEST_PAGES = 5
+const PULL_REQUESTS_PER_PAGE = 100
+function buildRepositoryTree(entries: GitHubTreeNode[]): RepositoryTreeNode[] {
+  type InternalNode = {
+    name: string
+    path: string
+    type: 'blob' | 'tree'
+    size?: number
+    children?: Map<string, InternalNode>
+  }
+
+  const root = new Map<string, InternalNode>()
+
+  const ensureChild = ({
+    parent,
+    name,
+    path,
+    type,
+    size,
+  }: {
+    parent: Map<string, InternalNode>
+    name: string
+    path: string
+    type: 'blob' | 'tree'
+    size?: number
+  }) => {
+    const existing = parent.get(name)
+    if (existing) {
+      if (type === 'tree') {
+        existing.type = 'tree'
+        if (!existing.children) {
+          existing.children = new Map()
+        }
+      } else if (typeof size === 'number') {
+        existing.size = size
+      }
+      return existing
+    }
+
+    const node: InternalNode = {
+      name,
+      path,
+      type,
+      size,
+      children: type === 'tree' ? new Map() : undefined,
+    }
+
+    parent.set(name, node)
+    return node
+  }
+
+  for (const entry of entries) {
+    const segments = entry.path.split('/')
+    let currentParent = root
+    let currentPath = ''
+
+    segments.forEach((segment, index) => {
+      currentPath = currentPath ? `${currentPath}/${segment}` : segment
+      const isLeaf = index === segments.length - 1
+      const nodeType = isLeaf ? (entry.type === 'tree' ? 'tree' : 'blob') : 'tree'
+      const nodeSize = isLeaf ? entry.size : undefined
+
+      const node = ensureChild({
+        parent: currentParent,
+        name: segment,
+        path: currentPath,
+        type: nodeType,
+        size: nodeSize,
+      })
+
+      if (node.children) {
+        currentParent = node.children
+      }
+    })
+  }
+
+  const toPublicNodes = (map: Map<string, InternalNode>): RepositoryTreeNode[] => {
+    return Array.from(map.values())
+      .sort((a, b) => {
+        if (a.type === b.type) {
+          return a.name.localeCompare(b.name)
+        }
+        return a.type === 'tree' ? -1 : 1
+      })
+      .map((node) => ({
+        name: node.name,
+        path: node.path,
+        type: node.type,
+        size: node.size,
+        children: node.children ? toPublicNodes(node.children) : undefined,
+      }))
+  }
+
+  return toPublicNodes(root)
+}
+
 
 class GitHubAuthError extends Error {}
 
@@ -136,16 +232,13 @@ async function fetchRepositoryDetails(owner: string, repo: string): Promise<Repo
 
   const repoData = (await repoResponse.json()) as GitHubRepoDetails
 
-  const [treeResponse, pullsResponse] = await Promise.all([
-    fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(repoData.default_branch)}?recursive=1`, {
+  const treeResponse = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(repoData.default_branch)}?recursive=1`,
+    {
       headers,
       cache: 'no-store',
-    }),
-    fetch(`https://api.github.com/repos/${owner}/${repo}/pulls?state=all&per_page=20`, {
-      headers,
-      cache: 'no-store',
-    }),
-  ])
+    },
+  )
 
   let treeEntries: GitHubTreeNode[] = []
   let treeTruncated = false
@@ -157,10 +250,7 @@ async function fetchRepositoryDetails(owner: string, repo: string): Promise<Repo
     treeEntries = entries.slice(0, MAX_TREE_ENTRIES)
   }
 
-  let pullRequests: GitHubPullRequest[] = []
-  if (pullsResponse.ok) {
-    pullRequests = (await pullsResponse.json()) as GitHubPullRequest[]
-  }
+  const pullRequests = await fetchAllPullRequests(owner, repo, headers)
 
   return {
     repository: {
@@ -202,6 +292,34 @@ async function fetchRepositoryDetails(owner: string, repo: string): Promise<Repo
       },
     })),
   }
+}
+
+async function fetchAllPullRequests(owner: string, repo: string, headers: HeadersInit): Promise<GitHubPullRequest[]> {
+  const allPulls: GitHubPullRequest[] = []
+
+  for (let page = 1; page <= MAX_PULL_REQUEST_PAGES; page += 1) {
+    const response = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/pulls?state=all&per_page=${PULL_REQUESTS_PER_PAGE}&page=${page}`,
+      {
+        headers,
+        cache: 'no-store',
+      },
+    )
+
+    if (!response.ok) {
+      console.error('Failed to load repository pull requests', response.status)
+      break
+    }
+
+    const pullsPage = (await response.json()) as GitHubPullRequest[]
+    allPulls.push(...pullsPage)
+
+    if (pullsPage.length < PULL_REQUESTS_PER_PAGE) {
+      break
+    }
+  }
+
+  return allPulls
 }
 
 function formatDate(value: string) {
@@ -263,6 +381,8 @@ export default async function RepositoryDetailsPage({
   const repository = repositoryDetails?.repository
   const tree = repositoryDetails?.tree
   const pullRequests = repositoryDetails?.pullRequests ?? []
+  const repositoryTreeNodes = tree ? buildRepositoryTree(tree.entries) : []
+  const treeTruncated = tree?.truncated ?? false
 
   const stats = repository
     ? [
@@ -382,87 +502,15 @@ export default async function RepositoryDetailsPage({
                   ))}
                 </div>
 
-                <div className="grid gap-6 lg:grid-cols-2">
-                  <div className="space-y-4 rounded-lg border border-border bg-card p-6 shadow-sm">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Layers className="h-5 w-5 text-primary" />
-                        <h2 className="text-lg font-semibold">Repository structure</h2>
-                      </div>
-                      <span className="text-xs text-muted-foreground">
-                        Showing {Math.min(tree.entries.length, 25)} of {tree.totalCount}{' '}
-                        {tree.truncated && '(truncated)'}
-                      </span>
-                    </div>
-                    <div className="rounded-md border border-border bg-muted/30">
-                      <ul className="divide-y divide-border text-sm font-mono">
-                        {tree.entries.slice(0, 25).map((node) => (
-                          <li key={node.path} className="px-4 py-2">
-                            <span className="mr-2">{node.type === 'tree' ? '📁' : '📄'}</span>
-                            {node.path}
-                            {typeof node.size === 'number' && (
-                              <span className="ml-2 text-xs text-muted-foreground">
-                                ({node.size} B)
-                              </span>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4 rounded-lg border border-border bg-card p-6 shadow-sm">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <GitPullRequest className="h-5 w-5 text-primary" />
-                        <h2 className="text-lg font-semibold">Pull requests</h2>
-                      </div>
-                      <span className="text-xs text-muted-foreground">
-                        Latest {Math.min(pullRequests.length, 10)}
-                      </span>
-                    </div>
-                    {pullRequests.length === 0 ? (
-                      <div className="rounded-md border border-border bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
-                        No pull requests found for this repository yet.
-                      </div>
-                    ) : (
-                      <ul className="space-y-3">
-                        {pullRequests.slice(0, 10).map((pr) => (
-                          <li
-                            key={pr.id}
-                            className="rounded-md border border-border bg-background/80 p-4"
-                          >
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                              <p className="font-semibold">
-                                #{pr.number} {pr.title}
-                              </p>
-                              <Badge variant="outline" className="text-xs">
-                                {pr.state.toUpperCase()}
-                              </Badge>
-                            </div>
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              Created {formatDate(pr.createdAt)} by {pr.author.login}
-                              {pr.mergedAt && ` • merged ${formatDate(pr.mergedAt)}`}
-                            </p>
-                            <div className="mt-3 flex flex-wrap gap-3 text-xs">
-                              <Link
-                                href={pr.htmlUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-primary hover:underline"
-                              >
-                                View on GitHub
-                              </Link>
-                              <span className="text-muted-foreground">
-                                Updated {formatDate(pr.updatedAt)}
-                              </span>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                </div>
+                <RepositoryExplorer
+                  owner={owner}
+                  repo={repo}
+                  defaultBranch={repository.defaultBranch}
+                  repositoryHtmlUrl={repository.htmlUrl}
+                  treeNodes={repositoryTreeNodes}
+                  treeTruncated={treeTruncated}
+                  pullRequests={pullRequests}
+                />
 
                 <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
                   <div className="flex flex-wrap items-center gap-3">
@@ -485,5 +533,6 @@ export default async function RepositoryDetailsPage({
     </div>
   )
 }
+
 
 

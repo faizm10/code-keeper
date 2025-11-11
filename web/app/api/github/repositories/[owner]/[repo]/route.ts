@@ -50,6 +50,8 @@ type GitHubPullRequest = {
 }
 
 const MAX_TREE_ENTRIES = 200
+const MAX_PULL_REQUEST_PAGES = 5
+const PULL_REQUESTS_PER_PAGE = 100
 const headersForToken = (token: string) => ({
   Authorization: `Bearer ${token}`,
   Accept: 'application/vnd.github+json',
@@ -105,24 +107,15 @@ export async function GET(
 
     const repoData = (await repoResponse.json()) as GitHubRepoDetails
 
-    const [treeResponse, pullsResponse] = await Promise.all([
-      fetch(
-        `https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(
-          repoData.default_branch,
-        )}?recursive=1`,
-        {
-          headers,
-          cache: 'no-store',
-        },
-      ),
-      fetch(
-        `https://api.github.com/repos/${owner}/${repo}/pulls?state=all&per_page=20`,
-        {
-          headers,
-          cache: 'no-store',
-        },
-      ),
-    ])
+    const treeResponse = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(
+        repoData.default_branch,
+      )}?recursive=1`,
+      {
+        headers,
+        cache: 'no-store',
+      },
+    )
 
     let treeEntries: GitHubTreeResponse['tree'] = []
     let isTreeTruncated = false
@@ -135,12 +128,7 @@ export async function GET(
       console.error('Failed to load repository tree', treeResponse.status)
     }
 
-    let pullRequests: GitHubPullRequest[] = []
-    if (pullsResponse.ok) {
-      pullRequests = (await pullsResponse.json()) as GitHubPullRequest[]
-    } else {
-      console.error('Failed to load repository pull requests', pullsResponse.status)
-    }
+    const pullRequests = await fetchAllPullRequests(owner, repo, headers)
 
     return NextResponse.json({
       repository: {
@@ -187,6 +175,34 @@ export async function GET(
     console.error('Unexpected error fetching repository details', error)
     return NextResponse.json({ error: 'Unexpected server error' }, { status: 500 })
   }
+}
+
+async function fetchAllPullRequests(owner: string, repo: string, headers: HeadersInit) {
+  const pulls: GitHubPullRequest[] = []
+
+  for (let page = 1; page <= MAX_PULL_REQUEST_PAGES; page += 1) {
+    const response = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/pulls?state=all&per_page=${PULL_REQUESTS_PER_PAGE}&page=${page}`,
+      {
+        headers,
+        cache: 'no-store',
+      },
+    )
+
+    if (!response.ok) {
+      console.error('Failed to load repository pull requests', response.status)
+      break
+    }
+
+    const pageData = (await response.json()) as GitHubPullRequest[]
+    pulls.push(...pageData)
+
+    if (pageData.length < PULL_REQUESTS_PER_PAGE) {
+      break
+    }
+  }
+
+  return pulls
 }
 
 

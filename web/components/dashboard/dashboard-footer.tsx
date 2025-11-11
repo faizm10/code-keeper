@@ -36,7 +36,6 @@ export function DashboardFooter({ className }: DashboardFooterProps) {
           title: 'Company',
           links: [
             { text: 'About', href: '/about' },
-            { text: 'Changelog', href: '/changelog' },
             { text: 'Contact', href: '/contact' },
           ],
         },
