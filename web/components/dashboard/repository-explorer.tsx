@@ -245,6 +245,14 @@ export function RepositoryExplorer({
                     >
                       View on GitHub
                     </Link>
+                    <Link
+                      href={`/dashboard/repositories/${encodeURIComponent(owner)}/${encodeURIComponent(
+                        repo,
+                      )}/pulls/${pr.number}`}
+                      className="text-primary hover:underline"
+                    >
+                      View details
+                    </Link>
                     <span className="text-muted-foreground">
                       Updated {new Date(pr.updatedAt).toLocaleString()}
                     </span>
