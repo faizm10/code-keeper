@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowRightIcon } from "lucide-react";
 import Github from "@/components/logos/github";
 import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 
 type HomeSearchParams = {
   code?: string;
@@ -33,6 +34,23 @@ export default async function Home({ searchParams }: HomeProps) {
     redirect(`/auth/callback?${query.toString()}`);
   }
 
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const navbarActions = user
+    ? [{ text: "Dashboard", href: "/dashboard", isButton: true, variant: "default" as const }]
+    : [
+        { text: "Sign in", href: "/auth/login", isButton: false as const },
+        {
+          text: "Get Started",
+          href: "/auth/signup",
+          isButton: true as const,
+          variant: "default" as const,
+        },
+      ];
+
   return (
     <>
       <Navbar
@@ -48,15 +66,7 @@ export default async function Home({ searchParams }: HomeProps) {
           { text: "Documentation", href: "/docs" },
           { text: "Get Started", href: "/get-started" },
         ]}
-        actions={[
-          { text: "Sign in", href: "/auth/login", isButton: false },
-          {
-            text: "Get Started",
-            href: "/auth/signup",
-            isButton: true,
-            variant: "default",
-          },
-        ]}
+        actions={navbarActions}
         customNavigation={
           <Navigation
             menuItems={[
