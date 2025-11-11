@@ -22,7 +22,6 @@ const footerColumns = [
     links: [
       { text: "Features", href: "/features" },
       { text: "Documentation", href: "/docs" },
-      { text: "Changelog", href: "/changelog" },
     ],
   },
   {
