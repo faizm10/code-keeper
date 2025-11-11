@@ -3,6 +3,7 @@
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
+import { getSiteUrl } from '@/lib/env'
 import {
   Card,
   CardContent,
@@ -23,10 +24,11 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
     setError(null)
 
     try {
+      const redirectUrl = `${getSiteUrl()}/auth/oauth?next=/protected`
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'github',
         options: {
-          redirectTo: `${window.location.origin}/auth/oauth?next=/protected`,
+          redirectTo: redirectUrl,
           scopes: 'repo read:user read:org user:email',
         },
       })

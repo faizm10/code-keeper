@@ -6,8 +6,33 @@ import Screenshot from "@/components/ui/screenshot";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRightIcon } from "lucide-react";
 import Github from "@/components/logos/github";
+import { redirect } from "next/navigation";
 
-export default function Home() {
+type HomeSearchParams = {
+  code?: string;
+  state?: string;
+  next?: string;
+};
+
+type HomeProps = {
+  searchParams: Promise<HomeSearchParams>;
+};
+
+export default async function Home({ searchParams }: HomeProps) {
+  const params = await searchParams;
+
+  if (params?.code) {
+    const query = new URLSearchParams();
+    query.set("code", params.code);
+    if (params.state) {
+      query.set("state", params.state);
+    }
+    if (params.next) {
+      query.set("next", params.next);
+    }
+    redirect(`/auth/callback?${query.toString()}`);
+  }
+
   return (
     <>
       <Navbar

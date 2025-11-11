@@ -5,6 +5,10 @@ function normalizeUrl(url: string) {
 }
 
 export function getSiteUrl() {
+  if (process.env.NEXT_PUBLIC_FORCE_LOCALHOST_REDIRECT === 'true') {
+    return 'http://localhost:3000'
+  }
+
   if (typeof window !== 'undefined') {
     const isLocalhost =
       window.location.hostname === 'localhost' ||
