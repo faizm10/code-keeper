@@ -1,9 +1,6 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import Navbar from "@/components/sections/navbar/default";
-import FooterSection from "@/components/sections/footer/default";
-import Navigation from "@/components/ui/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowRightIcon, Sparkles } from "lucide-react";
@@ -19,132 +16,41 @@ export default async function FeaturesPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const navbarActions = user
-    ? [{ text: "Dashboard", href: "/dashboard", isButton: true, variant: "default" as const }]
-    : [
-        { text: "Sign in", href: "/auth/login", isButton: false as const },
-        {
-          text: "Get Started",
-          href: "/auth/signup",
-          isButton: true as const,
-          variant: "default" as const,
-        },
-      ];
-
   const primaryCta = user ? { href: "/dashboard", label: "Open dashboard" } : { href: "/auth/signup", label: "Start free trial" };
   const secondaryCta = user ? { href: "/docs", label: "View documentation" } : { href: "/auth/login", label: "Sign in" };
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <Navbar
-        name="Code Keeper"
-        homeUrl="/"
-        logo={
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-lg">
-            CK
-          </div>
-        }
-        mobileLinks={[
-          { text: "Features", href: "/features" },
-          { text: "Documentation", href: "/docs" },
-          { text: "Get Started", href: "/get-started" },
-        ]}
-        actions={navbarActions}
-        customNavigation={
-          <Navigation
-            menuItems={[
-              {
-                title: "Product",
-                content: "default",
-              },
-              {
-                title: "Resources",
-                content: "components",
-              },
-              {
-                title: "Documentation",
-                isLink: true,
-                href: "/docs",
-              },
-            ]}
-            components={[
-              {
-                title: "API Reference",
-                href: "/docs/api",
-                description: "Understand the endpoints that power Code Keeper integrations.",
-              },
-              {
-                title: "Guides",
-                href: "/docs/guides",
-                description: "Deep dives into workflow automation and best practices.",
-              },
-              {
-                title: "Web App Guide",
-                href: "/docs/web",
-                description: "Explore the Code Keeper web experience and configuration.",
-              },
-            ]}
-            logo={
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-lg">
-                CK
-              </div>
-            }
-            logoTitle="Code Keeper"
-            logoDescription="Your autonomous maintenance layer for repositories and documentation."
-            logoHref="/"
-            introItems={[
-              {
-                title: "Changelog",
-                href: "/changelog",
-                description: "See what we shipped recently and what’s next.",
-              },
-              {
-                title: "Privacy",
-                href: "/privacy",
-                description: "Understand how we handle and protect your data.",
-              },
-              {
-                title: "Contact",
-                href: "/contact",
-                description: "Talk to us about enterprise rollouts or partnerships.",
-              },
-            ]}
-          />
-        }
-        showNavigation
-      />
-
-      <main className="flex-1">
-        <section className="border-b border-border bg-gradient-to-b from-background via-background to-muted/20">
-          <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
-            <div className="space-y-6">
-              <Badge variant="outline" className="gap-2 px-3 py-1 text-sm">
-                <Sparkles className="h-4 w-4 text-primary" />
-                Field notes from the Code Keeper team
-              </Badge>
-              <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-                How Code Keeper quietly maintains your repos so your team can ship faster
-              </h1>
-              <p className="text-lg text-muted-foreground">
-                We built Code Keeper because every engineering team we worked with shared the same pain: documentation lagged, refactors slipped,
-                and architecture guidelines lived in forgotten wiki pages. Here’s a behind-the-scenes look at how we turned those headaches into an autonomous maintenance layer.
-              </p>
-              <div className="flex flex-wrap items-center gap-3">
-                <Button asChild size="lg">
-                  <Link href={primaryCta.href} className="inline-flex items-center gap-2">
-                    {primaryCta.label}
-                    <ArrowRightIcon className="h-4 w-4" />
-                  </Link>
-                </Button>
-                <Button asChild size="lg" variant="ghost">
-                  <Link href={secondaryCta.href}>{secondaryCta.label}</Link>
-                </Button>
-              </div>
+    <div className="bg-background">
+      <section className="border-b border-border bg-gradient-to-b from-background via-background to-muted/20">
+        <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
+          <div className="space-y-6">
+            <Badge variant="outline" className="gap-2 px-3 py-1 text-sm">
+              <Sparkles className="h-4 w-4 text-primary" />
+              Field notes from the Code Keeper team
+            </Badge>
+            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+              How Code Keeper quietly maintains your repos so your team can ship faster
+            </h1>
+            <p className="text-lg text-muted-foreground">
+              We built Code Keeper because every engineering team we worked with shared the same pain: documentation lagged, refactors slipped,
+              and architecture guidelines lived in forgotten wiki pages. Here’s a behind-the-scenes look at how we turned those headaches into an autonomous maintenance layer.
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button asChild size="lg">
+                <Link href={primaryCta.href} className="inline-flex items-center gap-2">
+                  {primaryCta.label}
+                  <ArrowRightIcon className="h-4 w-4" />
+                </Link>
+              </Button>
+              <Button asChild size="lg" variant="ghost">
+                <Link href={secondaryCta.href}>{secondaryCta.label}</Link>
+              </Button>
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        <article className="mx-auto max-w-4xl space-y-16 px-4 py-16 sm:px-6 lg:px-8">
+      <article className="mx-auto max-w-4xl space-y-16 px-4 py-16 sm:px-6 lg:px-8">
           <section className="space-y-6">
             <div className="rounded-xl border border-border bg-muted/30 p-6 text-sm text-muted-foreground">
               I used to think documentation and cleanup would magically happen if I just pushed harder on feature delivery. The reality: nobody has time
@@ -242,48 +148,6 @@ export default async function FeaturesPage() {
             </div>
           </section>
         </article>
-      </main>
-
-      <FooterSection
-        name="Code Keeper"
-        logo={
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-lg">
-            CK
-          </div>
-        }
-        columns={[
-          {
-            title: "Product",
-            links: [
-              { text: "Features", href: "/features" },
-              { text: "Documentation", href: "/docs" },
-              { text: "Changelog", href: "/changelog" },
-            ],
-          },
-          {
-            title: "Resources",
-            links: [
-              { text: "Guides", href: "/docs/guides" },
-              { text: "API Reference", href: "/docs/api" },
-              { text: "Web App Guide", href: "/docs/web" },
-            ],
-          },
-          {
-            title: "Company",
-            links: [
-              { text: "About", href: "/about" },
-              { text: "Blog", href: "/blog" },
-              { text: "Contact", href: "/contact" },
-            ],
-          },
-        ]}
-        copyright="© 2025 Code Keeper. All rights reserved."
-        policies={[
-          { text: "Privacy Policy", href: "/privacy" },
-          { text: "Terms of Service", href: "/terms" },
-        ]}
-        showModeToggle
-      />
     </div>
   );
 }
