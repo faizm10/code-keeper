@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { AlertCircle, ExternalLink, GitPullRequest, Loader2, StickyNote } from 'lucide-react'
 import Prism from 'prismjs'
@@ -79,13 +79,20 @@ export function RepositoryExplorer({
   pullRequests,
 }: RepositoryExplorerProps) {
   const [fileState, setFileState] = useState<FileContentState>({ status: 'idle' })
+  const fetchControllerRef = useRef<AbortController | null>(null)
 
   const selectedPath = fileState.status === 'idle' ? null : fileState.path
+  const loadingPath = fileState.status === 'loading' ? fileState.path : null
+  const isLoading = fileState.status === 'loading'
 
   const handleSelectFile = useCallback(
     async (node: RepositoryTreeNode) => {
       if (node.type !== 'blob') return
       const path = node.path
+
+      fetchControllerRef.current?.abort()
+      const abortController = new AbortController()
+      fetchControllerRef.current = abortController
       setFileState({ status: 'loading', path })
 
       try {
@@ -93,6 +100,7 @@ export function RepositoryExplorer({
           `/api/github/repositories/${encodeURIComponent(owner)}/${encodeURIComponent(
             repo,
           )}/content?path=${encodeURIComponent(path)}&ref=${encodeURIComponent(defaultBranch)}`,
+          { signal: abortController.signal },
         )
 
         if (!response.ok) {
@@ -122,7 +130,16 @@ export function RepositoryExplorer({
           htmlUrl: htmlUrlHeader ? decodeURIComponent(htmlUrlHeader) : null,
           size: Number.isFinite(size) ? size : undefined,
         })
+        if (fetchControllerRef.current === abortController) {
+          fetchControllerRef.current = null
+        }
       } catch (error) {
+        if ((error as DOMException).name === 'AbortError' || abortController.signal.aborted) {
+          if (fetchControllerRef.current === abortController) {
+            fetchControllerRef.current = null
+          }
+          return
+        }
         console.error('Failed to fetch file contents', error)
         setFileState({
           status: 'error',
@@ -147,6 +164,13 @@ export function RepositoryExplorer({
     }
     return null
   }, [fileState])
+
+  useEffect(
+    () => () => {
+      fetchControllerRef.current?.abort()
+    },
+    [],
+  )
 
   useEffect(() => {
     if (fileInfo?.content) {
@@ -177,6 +201,7 @@ export function RepositoryExplorer({
               defaultBranch={defaultBranch}
               onSelectFile={handleSelectFile}
               selectedPath={selectedPath}
+          loadingPath={loadingPath}
             />
           </div>
         </div>
@@ -260,12 +285,6 @@ export function RepositoryExplorer({
               Select a file from the tree to preview its contents.
             </div>
           )}
-          {fileState.status === 'loading' && (
-            <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Loading file contents...
-            </div>
-          )}
           {fileState.status === 'error' && (
             <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-sm text-destructive">
               <AlertCircle className="h-5 w-5" />
@@ -284,6 +303,15 @@ export function RepositoryExplorer({
               </pre>
             </div>
           )}
+        {fileState.status === 'loading' && (
+          <div className="h-full rounded-md border border-dashed border-border/60 bg-muted/20" />
+        )}
+        {isLoading && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-background/70 backdrop-blur-sm">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            <span className="text-xs text-muted-foreground">Loading file contents...</span>
+          </div>
+        )}
         </div>
       </div>
     </div>

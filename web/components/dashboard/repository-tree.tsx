@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import { ChevronDown, ChevronRight, ExternalLink, FileText, Folder } from 'lucide-react'
+import { ChevronDown, ChevronRight, ExternalLink, FileText, Folder, Loader2 } from 'lucide-react'
 
 export type RepositoryTreeNode = {
   name: string
@@ -18,6 +18,7 @@ type RepositoryTreeProps = {
   defaultBranch: string
   onSelectFile?: (node: RepositoryTreeNode) => void
   selectedPath?: string | null
+  loadingPath?: string | null
 }
 
 export function RepositoryTree({
@@ -26,6 +27,7 @@ export function RepositoryTree({
   defaultBranch,
   onSelectFile,
   selectedPath,
+  loadingPath,
 }: RepositoryTreeProps) {
   const initialExpanded = useMemo(() => {
     const topLevelDirectories = nodes
@@ -69,6 +71,7 @@ export function RepositoryTree({
       const isDirectory = node.type === 'tree'
       const isExpanded = isDirectory ? expandedPaths.has(node.path) : false
       const isSelected = !isDirectory && selectedPath === node.path
+      const isLoading = !isDirectory && loadingPath === node.path
       const paddingLeft = depth * 1.25
 
       return (
@@ -107,8 +110,14 @@ export function RepositoryTree({
                     onClick={() => onSelectFile?.(node)}
                     className="flex items-center gap-2 text-left text-current hover:text-primary focus:outline-none"
                   >
-                    <FileText className="h-4 w-4 flex-none text-muted-foreground/70" />
-                    <span>{node.name}</span>
+                    {isLoading ? (
+                      <Loader2 className="h-4 w-4 flex-none animate-spin text-primary" />
+                    ) : (
+                      <FileText className="h-4 w-4 flex-none text-muted-foreground/70" />
+                    )}
+                    <span className={isLoading ? 'font-medium text-primary' : undefined}>
+                      {node.name}
+                    </span>
                   </button>
                 </>
               )}
