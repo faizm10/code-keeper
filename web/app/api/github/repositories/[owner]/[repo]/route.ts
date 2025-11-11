@@ -63,8 +63,11 @@ export async function GET(
   context: { params: RouteParams | Promise<RouteParams> },
 ) {
   const params = await context.params
-  const owner = decodeURIComponent(params.owner)
-  const repo = decodeURIComponent(params.repo)
+  const ownerParam = decodeURIComponent(params.owner)
+  const repoParam = decodeURIComponent(params.repo)
+
+  const owner = ownerParam.startsWith('@') ? ownerParam.slice(1) : ownerParam
+  const repo = repoParam.endsWith('.git') ? repoParam.slice(0, -4) : repoParam
 
   try {
     const { token, error } = await getGitHubAccessToken()

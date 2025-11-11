@@ -214,10 +214,15 @@ function formatDate(value: string) {
 
 export const dynamic = 'force-dynamic'
 
+type RepositoryParams = {
+  owner: string
+  repo: string
+}
+
 export default async function RepositoryDetailsPage({
   params,
 }: {
-  params: { owner: string; repo: string }
+  params: Promise<RepositoryParams> | RepositoryParams
 }) {
   const supabase = await createClient()
   const {
@@ -228,8 +233,13 @@ export default async function RepositoryDetailsPage({
     redirect('/auth/login')
   }
 
-  const owner = decodeURIComponent(params.owner)
-  const repo = decodeURIComponent(params.repo)
+  const resolvedParams = await params
+
+  const ownerParam = decodeURIComponent(resolvedParams.owner)
+  const repoParam = decodeURIComponent(resolvedParams.repo)
+
+  const owner = ownerParam.startsWith('@') ? ownerParam.slice(1) : ownerParam
+  const repo = repoParam.endsWith('.git') ? repoParam.slice(0, -4) : repoParam
 
   let repositoryDetails: RepositoryDetailsResponse | null = null
   let errorMessage: string | null = null
