@@ -18,6 +18,7 @@ import { PullRequestsList } from '@/components/dashboard/pull-requests-list'
 import { RepoHealth } from '@/components/dashboard/repo-health'
 import { RepoAnalysis } from '@/components/dashboard/repo-analysis'
 import { PRRunsList } from '@/components/dashboard/pr-runs-list'
+import { PRChecksTable } from '@/components/dashboard/pr-checks-table'
 
 type GitHubRepoDetails = {
   name: string
@@ -402,18 +403,18 @@ export default async function RepositoryDetailsPage({
                   <TabsContent value="analyze">
                     <RepoAnalysis owner={owner} repo={repo} />
                   </TabsContent>
-                </Tabs>
+                       </Tabs>
 
-                {/* PR Runs Section */}
-                <div className="mt-8">
-                  <PRRunsList owner={owner} repo={repo} />
-                </div>
-              </>
-            ) : null}
-          </div>
-    </div>
-  )
-}
+                       {/* PR Checks Table */}
+                       <div className="mt-8">
+                         <PRChecksTable owner={owner} repo={repo} />
+                       </div>
+                     </>
+                   ) : null}
+                 </div>
+           </div>
+         )
+       }
 
 
 

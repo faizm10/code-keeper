@@ -57,9 +57,66 @@ type PRAdviceResult = {
 }
 
 /**
+ * Check if a file should be ignored (tests, stories, generated files, etc.)
+ */
+function shouldIgnoreFile(filename: string): boolean {
+  const lowerFilename = filename.toLowerCase()
+  
+  // Test files
+  if (
+    filename.includes('__tests__/') ||
+    filename.includes('/__tests__/') ||
+    filename.includes('/test/') ||
+    filename.includes('/tests/') ||
+    lowerFilename.endsWith('.test.ts') ||
+    lowerFilename.endsWith('.test.tsx') ||
+    lowerFilename.endsWith('.test.js') ||
+    lowerFilename.endsWith('.test.jsx') ||
+    lowerFilename.endsWith('.spec.ts') ||
+    lowerFilename.endsWith('.spec.tsx') ||
+    lowerFilename.endsWith('.spec.js') ||
+    lowerFilename.endsWith('.spec.jsx')
+  ) {
+    return true
+  }
+  
+  // Storybook / demo files
+  if (
+    lowerFilename.endsWith('.stories.tsx') ||
+    lowerFilename.endsWith('.stories.ts') ||
+    lowerFilename.endsWith('.stories.jsx') ||
+    lowerFilename.endsWith('.stories.js') ||
+    filename.includes('.story.')
+  ) {
+    return true
+  }
+  
+  // Auto-generated files
+  if (
+    filename.includes('/generated/') ||
+    filename.includes('/.generated/') ||
+    filename.startsWith('generated/') ||
+    filename.includes('/node_modules/') ||
+    filename.includes('/dist/') ||
+    filename.includes('/build/') ||
+    filename.includes('/.next/')
+  ) {
+    return true
+  }
+  
+  return false
+}
+
+/**
  * Classify a file as code, docs, or other based on path and extension
+ * Ignores test files, storybook files, and generated files
  */
 function classifyFile(filename: string): 'code' | 'docs' | 'other' {
+  // Skip ignored files (tests, stories, generated)
+  if (shouldIgnoreFile(filename)) {
+    return 'other'
+  }
+  
   const lowerFilename = filename.toLowerCase()
   
   // Code file patterns
@@ -234,22 +291,18 @@ function generateCommentBody(
     return list
   }
 
-  // Case 1: Code + Docs changed → positive comment
+  // Case 1: Code + Docs changed → positive comment (optional, can be shorter)
   if (advice.importantCodeChanged && advice.docsChanged) {
+    // Short, friendly comment - or you can return null to skip commenting
     return `<!-- codekeeper:advice:v1 -->
 
 ## 👋 Codekeeper
 
-Nice! I see you updated docs along with code changes 👌
-
-**Code files changed:** ${advice.codeFiles.length}  
-**Docs files updated:** ${advice.docFiles.length}
+I see you updated docs along with your code changes 👍 Nothing else from me.
 
 ### Files changed
 
 ${formatFileList(advice.allFiles)}
-
-Keep up the good work!
 `
   }
   
@@ -444,14 +497,17 @@ export async function POST(
           .update({
             status: 'completed',
             completed_at: new Date().toISOString(),
-            logs: {
-              codeFiles: advice.codeFiles,
-              docFiles: advice.docFiles,
-              importantCodeChanged: advice.importantCodeChanged,
-              docsChanged: advice.docsChanged,
-              skipped: true,
-              reason: 'Docs-only PR, no comment needed',
-            },
+          logs: {
+            codeFiles: advice.codeFiles,
+            docFiles: advice.docFiles,
+            codeFilesCount: advice.codeFiles.length,
+            docFilesCount: advice.docFiles.length,
+            importantCodeChanged: advice.importantCodeChanged,
+            docsChanged: advice.docsChanged,
+            comment_posted: false,
+            skipped: true,
+            reason: 'Docs-only PR, no comment needed',
+          },
           })
           .eq('id', prRunId)
       }
@@ -520,10 +576,13 @@ export async function POST(
           logs: {
             codeFiles: advice.codeFiles,
             docFiles: advice.docFiles,
+            codeFilesCount: advice.codeFiles.length,
+            docFilesCount: advice.docFiles.length,
             importantCodeChanged: advice.importantCodeChanged,
             docsChanged: advice.docsChanged,
             suggestions: advice.docSuggestions,
             changedFilesCount: advice.allFiles.length,
+            comment_posted: commentId !== null,
             fullCommentBody: commentBody, // Store the full comment body
           },
         })
