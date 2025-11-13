@@ -213,21 +213,4 @@ docker-compose up -d
 3. Test your changes thoroughly
 4. Update documentation as needed
 
-## 📝 License
-
-[Add your license here]
-
-## 🔗 Links
-
-- [Next.js Documentation](https://nextjs.org/docs)
-- [Docker Documentation](https://docs.docker.com/)
-- [TypeScript Documentation](https://www.typescriptlang.org/docs/)
-
-## 📧 Contact
-
-[Add contact information here]
-
 ---
-
-Built with ❤️ using Next.js, TypeScript, and Docker
-
