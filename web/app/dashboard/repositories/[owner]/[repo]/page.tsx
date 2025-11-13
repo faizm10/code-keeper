@@ -12,8 +12,10 @@ import {
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { getGitHubAccessToken } from '@/lib/github/auth'
 import { PullRequestsList } from '@/components/dashboard/pull-requests-list'
+import { RepoHealth } from '@/components/dashboard/repo-health'
 
 type GitHubRepoDetails = {
   name: string
@@ -366,11 +368,34 @@ export default async function RepositoryDetailsPage({
                   ))}
                 </div>
 
-                <PullRequestsList
-                  owner={owner}
-                  repo={repo}
-                  pullRequests={pullRequests}
-                />
+                <Tabs defaultValue="overview" className="w-full">
+                  <TabsList>
+                    <TabsTrigger value="overview">Overview</TabsTrigger>
+                    <TabsTrigger value="pulls">Pull Requests</TabsTrigger>
+                    <TabsTrigger value="health">Health</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="overview">
+                    <div className="rounded-lg border border-border bg-card p-6">
+                      <h2 className="text-lg font-semibold mb-4">Repository Overview</h2>
+                      <p className="text-sm text-muted-foreground">
+                        This repository has {pullRequests.length} pull request{pullRequests.length !== 1 ? 's' : ''} and is actively maintained.
+                      </p>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="pulls">
+                    <PullRequestsList
+                      owner={owner}
+                      repo={repo}
+                      pullRequests={pullRequests}
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="health">
+                    <RepoHealth owner={owner} repo={repo} />
+                  </TabsContent>
+                </Tabs>
               </>
             ) : null}
           </div>
