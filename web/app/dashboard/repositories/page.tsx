@@ -58,9 +58,35 @@ async function fetchInitialRepositories() {
 
     const repositories = (await response.json()) as GitHubRepository[]
 
+    // Transform to match expected format (already in correct format from API)
+    const transformedRepos = repositories.map((repo) => ({
+      id: repo.id,
+      name: repo.name,
+      full_name: repo.full_name,
+      description: repo.description,
+      private: repo.private,
+      language: repo.language,
+      stargazers_count: repo.stargazers_count,
+      forks_count: repo.forks_count,
+      open_issues_count: repo.open_issues_count,
+      default_branch: repo.default_branch,
+      html_url: repo.html_url,
+      pushed_at: repo.pushed_at,
+      updated_at: repo.updated_at,
+      created_at: repo.created_at,
+      owner: {
+        login: repo.owner.login,
+        avatar_url: repo.owner.avatar_url,
+        html_url: repo.owner.html_url,
+      },
+      topics: repo.topics || [],
+      archived: repo.archived || false,
+      disabled: repo.disabled || false,
+    }))
+
     return {
-      repositories,
-      total: repositories.length,
+      repositories: transformedRepos,
+      total: transformedRepos.length,
     }
   } catch (error) {
     console.error('Error fetching initial repositories:', error)

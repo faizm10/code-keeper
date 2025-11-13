@@ -95,8 +95,34 @@ export async function GET(request: Request) {
       }
 
       const data = await response.json()
+      // Transform GitHub API response to match component expectations
+      const transformedRepos = (data.items as GitHubRepository[]).map((repo) => ({
+        id: repo.id,
+        name: repo.name,
+        full_name: repo.full_name,
+        description: repo.description,
+        private: repo.private,
+        language: repo.language,
+        stargazers_count: repo.stargazers_count,
+        forks_count: repo.forks_count,
+        open_issues_count: repo.open_issues_count,
+        default_branch: repo.default_branch,
+        html_url: repo.html_url,
+        pushed_at: repo.pushed_at,
+        updated_at: repo.updated_at,
+        created_at: repo.created_at,
+        owner: {
+          login: repo.owner.login,
+          avatar_url: repo.owner.avatar_url,
+          html_url: repo.owner.html_url,
+        },
+        topics: repo.topics || [],
+        archived: repo.archived || false,
+        disabled: repo.disabled || false,
+      }))
+      
       return NextResponse.json({
-        repositories: data.items as GitHubRepository[],
+        repositories: transformedRepos,
         total_count: data.total_count,
         page,
         per_page: perPage,
@@ -136,6 +162,32 @@ export async function GET(request: Request) {
 
     const repositories = (await response.json()) as GitHubRepository[]
 
+    // Transform GitHub API response to match component expectations
+    const transformedRepos = repositories.map((repo) => ({
+      id: repo.id,
+      name: repo.name,
+      full_name: repo.full_name,
+      description: repo.description,
+      private: repo.private,
+      language: repo.language,
+      stargazers_count: repo.stargazers_count,
+      forks_count: repo.forks_count,
+      open_issues_count: repo.open_issues_count,
+      default_branch: repo.default_branch,
+      html_url: repo.html_url,
+      pushed_at: repo.pushed_at,
+      updated_at: repo.updated_at,
+      created_at: repo.created_at,
+      owner: {
+        login: repo.owner.login,
+        avatar_url: repo.owner.avatar_url,
+        html_url: repo.owner.html_url,
+      },
+      topics: repo.topics || [],
+      archived: repo.archived || false,
+      disabled: repo.disabled || false,
+    }))
+
     // Get total count by fetching user info
     const userResponse = await fetch('https://api.github.com/user', {
       headers,
@@ -149,7 +201,7 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json({
-      repositories,
+      repositories: transformedRepos,
       total_count: totalCount,
       page,
       per_page: perPage,

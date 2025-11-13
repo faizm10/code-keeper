@@ -153,8 +153,49 @@ export function RepositoryOnboarding() {
         throw new Error(message)
       }
 
-      const data = (await response.json()) as { repositories: RepositorySummary[] }
-      setRepositories(data.repositories)
+      const data = (await response.json()) as { repositories: Array<{
+        id: number
+        name: string
+        full_name: string
+        description: string | null
+        private: boolean
+        language: string | null
+        stargazers_count: number
+        forks_count: number
+        open_issues_count: number
+        default_branch: string
+        html_url: string
+        pushed_at: string
+        updated_at: string
+        created_at: string
+        owner: {
+          login: string
+          avatar_url: string
+          html_url: string
+        }
+        topics: string[]
+        archived: boolean
+        disabled: boolean
+      }> }
+      
+      // Transform API response to match RepositorySummary format
+      const transformedRepos: RepositorySummary[] = data.repositories.map((repo) => ({
+        id: repo.id,
+        name: repo.name,
+        fullName: repo.full_name,
+        description: repo.description,
+        private: repo.private,
+        language: repo.language,
+        stars: repo.stargazers_count,
+        htmlUrl: repo.html_url,
+        owner: {
+          login: repo.owner.login,
+          avatarUrl: repo.owner.avatar_url,
+        },
+        updatedAt: repo.updated_at,
+      }))
+      
+      setRepositories(transformedRepos)
       if (data.repositories.length === 0) {
         setError('No repositories found for your GitHub account.')
         if (!options?.preserveStatus) {
@@ -732,15 +773,17 @@ export function RepositoryOnboarding() {
                       <span className="inline-flex items-center text-sm font-medium text-primary">
                         View detailed insights →
                       </span>
-                      <Link
-                        href={repo.htmlUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-xs text-muted-foreground hover:underline"
-                        onClick={(event) => event.stopPropagation()}
-                      >
-                        Open on GitHub
-                      </Link>
+                      {repo.htmlUrl && (
+                        <Link
+                          href={repo.htmlUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-muted-foreground hover:underline"
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          Open on GitHub
+                        </Link>
+                      )}
                     </div>
                   </button>
                 ))}
