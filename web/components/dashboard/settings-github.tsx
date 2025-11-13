@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { CheckCircle2, Github, Link2, AlertCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -30,17 +31,17 @@ export function SettingsGitHub({ hasGitHub }: SettingsGitHubProps) {
       if (error) throw error
     } catch (error) {
       console.error('Failed to connect GitHub:', error)
-      alert('Failed to connect GitHub account. Please try again.')
+      toast.error('Failed to connect GitHub account. Please try again.')
       setLoading(false)
     }
   }
 
   const handleDisconnect = async () => {
-    // This would typically require a server action
-    // For now, just show an alert
-    if (confirm('Are you sure you want to disconnect your GitHub account? This will remove access to your repositories.')) {
-      alert('GitHub disconnection is not yet implemented. Please contact support if you need to disconnect your account.')
-    }
+    toast.info('GitHub disconnection is not yet implemented.', {
+      description: 'Please contact support if you need to disconnect your account.',
+      duration: 5000,
+    })
+    // TODO: Implement GitHub disconnection
   }
 
   return (

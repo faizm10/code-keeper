@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -17,25 +18,21 @@ interface SettingsAccountProps {
 export function SettingsAccount({ user }: SettingsAccountProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    setError(null)
 
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match')
+      toast.error('Passwords do not match')
       setLoading(false)
       return
     }
 
     if (newPassword.length < 6) {
-      setError('Password must be at least 6 characters long')
+      toast.error('Password must be at least 6 characters long')
       setLoading(false)
       return
     }
@@ -50,38 +47,21 @@ export function SettingsAccount({ user }: SettingsAccountProps) {
 
       setNewPassword('')
       setConfirmPassword('')
-      alert('Password updated successfully!')
+      toast.success('Password updated successfully!')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update password')
+      toast.error(err instanceof Error ? err.message : 'Failed to update password')
     } finally {
       setLoading(false)
     }
   }
 
   const handleDeleteAccount = async () => {
-    if (!confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
-      return
-    }
-
-    if (!confirm('This will permanently delete all your data, repositories, and snippets. Are you absolutely sure?')) {
-      return
-    }
-
-    setLoading(true)
-    setError(null)
-
-    try {
-      // In a real app, you would call an API endpoint to delete the account
-      // This would handle cleanup of all user data
-      alert('Account deletion is not yet implemented. Please contact support to delete your account.')
-      // const response = await fetch('/api/account/delete', { method: 'DELETE' })
-      // if (!response.ok) throw new Error('Failed to delete account')
-      // router.push('/auth/login')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete account')
-    } finally {
-      setLoading(false)
-    }
+    toast.info('Account deletion is not yet implemented.', {
+      description: 'Please contact support to delete your account. This feature will be available in a future update.',
+      duration: 5000,
+    })
+    // TODO: Implement account deletion with confirmation dialog
+    // For now, using toast to inform users
   }
 
   return (
@@ -121,12 +101,6 @@ export function SettingsAccount({ user }: SettingsAccountProps) {
               required
             />
           </div>
-
-          {error && (
-            <div className="rounded-md bg-destructive/10 border border-destructive/20 p-3">
-              <p className="text-sm text-destructive">{error}</p>
-            </div>
-          )}
 
           <Button type="submit" disabled={loading}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

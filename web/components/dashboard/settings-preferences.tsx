@@ -1,15 +1,15 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { ModeToggle } from '@/components/ui/mode-toggle'
-import { CheckCircle2, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 
 export function SettingsPreferences() {
   const [loading, setLoading] = useState(false)
-  const [success, setSuccess] = useState(false)
   const [emailNotifications, setEmailNotifications] = useState(true)
   const [repositorySync, setRepositorySync] = useState(true)
   const [mounted, setMounted] = useState(false)
@@ -34,7 +34,6 @@ export function SettingsPreferences() {
     if (!mounted) return
     
     setLoading(true)
-    setSuccess(false)
 
     try {
       // Save preferences to localStorage
@@ -46,10 +45,10 @@ export function SettingsPreferences() {
       // In a real app, you would save these to the database
       // await saveUserPreferences({ emailNotifications, repositorySync })
 
-      setSuccess(true)
-      setTimeout(() => setSuccess(false), 3000)
+      toast.success('Preferences saved successfully!')
     } catch (error) {
       console.error('Failed to save preferences:', error)
+      toast.error('Failed to save preferences. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -103,13 +102,6 @@ export function SettingsPreferences() {
           disabled={loading}
         />
       </div>
-
-      {success && (
-        <div className="rounded-md bg-primary/10 border border-primary/20 p-3 flex items-center gap-2">
-          <CheckCircle2 className="h-4 w-4 text-primary" />
-          <p className="text-sm text-primary">Preferences saved successfully!</p>
-        </div>
-      )}
 
       <div className="flex justify-end pt-4 border-t border-border">
         <Button onClick={handleSave} disabled={loading}>

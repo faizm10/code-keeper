@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 import NavbarVisibility from "@/components/layout/navbar-visibility";
 import FooterVisibility from "@/components/layout/footer-visibility";
+import { Toaster } from "@/components/ui/sonner";
 import { createClient } from "@/lib/supabase/server";
 
 const geistSans = Geist({
@@ -81,6 +82,7 @@ export default async function RootLayout({
               showModeToggle
             />
           </div>
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>

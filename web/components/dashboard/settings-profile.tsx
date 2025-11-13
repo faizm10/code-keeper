@@ -2,12 +2,13 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { createClient } from '@/lib/supabase/client'
 import { User } from '@supabase/supabase-js'
-import { CheckCircle2, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 
 interface SettingsProfileProps {
   user: User
@@ -16,8 +17,6 @@ interface SettingsProfileProps {
 export function SettingsProfile({ user }: SettingsProfileProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
-  const [success, setSuccess] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   
   const [fullName, setFullName] = useState(
     user.user_metadata?.full_name || user.user_metadata?.name || ''
@@ -27,8 +26,6 @@ export function SettingsProfile({ user }: SettingsProfileProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    setError(null)
-    setSuccess(false)
 
     try {
       const supabase = createClient()
@@ -49,15 +46,14 @@ export function SettingsProfile({ user }: SettingsProfileProps) {
         })
 
         if (emailError) throw emailError
+        toast.success('Profile updated! Please check your email to verify the new address.')
+      } else {
+        toast.success('Profile updated successfully!')
       }
 
-      setSuccess(true)
       router.refresh()
-      
-      // Hide success message after 3 seconds
-      setTimeout(() => setSuccess(false), 3000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update profile')
+      toast.error(err instanceof Error ? err.message : 'Failed to update profile')
     } finally {
       setLoading(false)
     }
@@ -94,19 +90,6 @@ export function SettingsProfile({ user }: SettingsProfileProps) {
           Your display name as it appears on your profile
         </p>
       </div>
-
-      {error && (
-        <div className="rounded-md bg-destructive/10 border border-destructive/20 p-3">
-          <p className="text-sm text-destructive">{error}</p>
-        </div>
-      )}
-
-      {success && (
-        <div className="rounded-md bg-primary/10 border border-primary/20 p-3 flex items-center gap-2">
-          <CheckCircle2 className="h-4 w-4 text-primary" />
-          <p className="text-sm text-primary">Profile updated successfully!</p>
-        </div>
-      )}
 
       <div className="flex justify-end">
         <Button type="submit" disabled={loading}>

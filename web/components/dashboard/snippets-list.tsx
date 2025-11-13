@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import { toast } from 'sonner'
 import { 
   Search, 
   Plus, 
@@ -12,8 +13,7 @@ import {
   Edit,
   X,
   Filter,
-  FileCode,
-  CheckCircle2
+  FileCode
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -91,9 +91,18 @@ export function SnippetsList() {
   }
 
   const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this snippet?')) {
-      saveSnippets(snippets.filter(s => s.id !== id))
-    }
+    const snippet = snippets.find(s => s.id === id)
+    toast.error(`Delete "${snippet?.title || 'snippet'}"?`, {
+      description: 'This action cannot be undone.',
+      action: {
+        label: 'Delete',
+        onClick: () => {
+          saveSnippets(snippets.filter(s => s.id !== id))
+          toast.success('Snippet deleted successfully')
+        },
+      },
+      duration: 5000,
+    })
   }
 
   const handleSave = (snippetData: Omit<Snippet, 'id' | 'createdAt' | 'updatedAt'>) => {
@@ -105,6 +114,7 @@ export function SnippetsList() {
           : s
       )
       saveSnippets(updated)
+      toast.success('Snippet updated successfully!')
     } else {
       // Create new
       const newSnippet: Snippet = {
@@ -114,6 +124,7 @@ export function SnippetsList() {
         updatedAt: new Date().toISOString(),
       }
       saveSnippets([...snippets, newSnippet])
+      toast.success('Snippet created successfully!')
     }
     setIsModalOpen(false)
     setEditingSnippet(null)
@@ -123,9 +134,11 @@ export function SnippetsList() {
     try {
       await navigator.clipboard.writeText(code)
       setCopiedId(id)
+      toast.success('Code copied to clipboard!')
       setTimeout(() => setCopiedId(null), 2000)
     } catch (error) {
       console.error('Failed to copy:', error)
+      toast.error('Failed to copy code to clipboard')
     }
   }
 
@@ -394,17 +407,8 @@ export function SnippetsList() {
                           className="h-7 text-xs"
                           onClick={() => handleCopy(snippet.code, snippet.id)}
                         >
-                          {copiedId === snippet.id ? (
-                            <>
-                              <CheckCircle2 className="mr-1 h-3 w-3" />
-                              Copied!
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="mr-1 h-3 w-3" />
-                              Copy
-                            </>
-                          )}
+                          <Copy className="mr-1 h-3 w-3" />
+                          Copy
                         </Button>
                       </div>
                       <pre className="text-xs font-mono overflow-x-auto text-foreground/80">
