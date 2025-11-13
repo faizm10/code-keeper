@@ -1,20 +1,31 @@
 import { NextResponse } from 'next/server'
 import { getGitHubAccessToken } from '@/lib/github/auth'
 
-type GitHubRepo = {
+export const dynamic = 'force-dynamic'
+
+type GitHubRepository = {
   id: number
   name: string
   full_name: string
-  private: boolean
   description: string | null
+  private: boolean
   language: string | null
+  stargazers_count: number
+  forks_count: number
+  open_issues_count: number
+  default_branch: string
   html_url: string
+  pushed_at: string
+  updated_at: string
+  created_at: string
   owner: {
     login: string
     avatar_url: string
+    html_url: string
   }
-  stargazers_count: number
-  updated_at: string
+  topics: string[]
+  archived: boolean
+  disabled: boolean
 }
 
 export async function GET(request: Request) {
@@ -23,74 +34,122 @@ export async function GET(request: Request) {
 
     if (error || !token) {
       return NextResponse.json(
-        { error: error?.message ?? 'Unable to authenticate with GitHub' },
-        { status: error?.message === 'Unauthenticated' ? 401 : 400 },
+        { error: error?.message || 'Missing GitHub access token' },
+        { status: 401 }
       )
     }
 
     const { searchParams } = new URL(request.url)
-    const visibility = searchParams.get('visibility') ?? 'all'
-    const affiliation = searchParams.get('affiliation') ?? 'owner,collaborator,organization_member'
-    const perPage = parseInt(searchParams.get('per_page') ?? '50', 10)
+    const page = parseInt(searchParams.get('page') || '1')
+    const perPage = parseInt(searchParams.get('per_page') || '30')
+    const type = searchParams.get('type') || 'all' // all, owner, member
+    const sort = searchParams.get('sort') || 'updated' // created, updated, pushed, full_name
+    const direction = searchParams.get('direction') || 'desc' // asc, desc
+    const q = searchParams.get('q') || ''
 
-    const response = await fetch(
-      `https://api.github.com/user/repos?per_page=${Math.min(perPage, 100)}&sort=updated&visibility=${visibility}&affiliation=${encodeURIComponent(
-        affiliation,
-      )}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/vnd.github+json',
-          'X-GitHub-Api-Version': '2022-11-28',
-        },
-      },
-    )
-
-    if (response.status === 401) {
-      return NextResponse.json(
-        { error: 'GitHub authentication failed. Please reconnect your GitHub account.' },
-        { status: 401 },
-      )
+    const headers: HeadersInit = {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
     }
+
+    // If there's a search query, use the search API
+    if (q) {
+      // Get authenticated user's login
+      const userResponse = await fetch('https://api.github.com/user', {
+        headers,
+        cache: 'no-store',
+      })
+
+      if (!userResponse.ok) {
+        const error = await userResponse.text()
+        return NextResponse.json(
+          { error: `GitHub API error: ${error}` },
+          { status: userResponse.status }
+        )
+      }
+
+      const user = await userResponse.json()
+      const username = user.login
+
+      // Build search query for user's repositories
+      const searchUrl = new URL('https://api.github.com/search/repositories')
+      // Search in user's repositories with the query
+      searchUrl.searchParams.set('q', `${q} user:${username} in:name,description`)
+      searchUrl.searchParams.set('sort', sort === 'full_name' ? 'updated' : sort)
+      searchUrl.searchParams.set('order', direction)
+      searchUrl.searchParams.set('per_page', perPage.toString())
+      searchUrl.searchParams.set('page', page.toString())
+
+      const response = await fetch(searchUrl.toString(), {
+        headers,
+        cache: 'no-store',
+      })
+
+      if (!response.ok) {
+        const error = await response.text()
+        return NextResponse.json(
+          { error: `GitHub API error: ${error}` },
+          { status: response.status }
+        )
+      }
+
+      const data = await response.json()
+      return NextResponse.json({
+        repositories: data.items as GitHubRepository[],
+        total_count: data.total_count,
+        page,
+        per_page: perPage,
+      })
+    }
+
+    // Otherwise, use the repos API
+    const url = new URL('https://api.github.com/user/repos')
+    url.searchParams.set('type', type)
+    url.searchParams.set('sort', sort)
+    url.searchParams.set('direction', direction)
+    url.searchParams.set('per_page', perPage.toString())
+    url.searchParams.set('page', page.toString())
+    url.searchParams.set('affiliation', 'owner,collaborator,organization_member')
+
+    const response = await fetch(url.toString(), {
+      headers,
+      cache: 'no-store',
+    })
 
     if (!response.ok) {
-      const errorBody = await response.json().catch(() => ({}))
-      console.error('GitHub API error', response.status, errorBody)
+      const error = await response.text()
       return NextResponse.json(
-        { error: 'Failed to load repositories from GitHub' },
-        { status: 502 },
+        { error: `GitHub API error: ${error}` },
+        { status: response.status }
       )
     }
 
-    const data = (await response.json()) as GitHubRepo[]
-    const search = searchParams.get('search')?.toLowerCase()
-    const repositories = data
-      .filter((repo) => {
-        if (!search) return true
-        const haystack = `${repo.name} ${repo.full_name} ${repo.description ?? ''}`.toLowerCase()
-        return haystack.includes(search)
-      })
-      .map((repo) => ({
-        id: repo.id,
-        name: repo.name,
-        fullName: repo.full_name,
-        description: repo.description,
-        private: repo.private,
-        language: repo.language,
-        stars: repo.stargazers_count,
-        htmlUrl: repo.html_url,
-        owner: {
-          login: repo.owner.login,
-          avatarUrl: repo.owner.avatar_url,
-        },
-        updatedAt: repo.updated_at,
-      }))
+    const repositories = (await response.json()) as GitHubRepository[]
 
-    return NextResponse.json({ repositories })
+    // Get total count by fetching user info
+    const userResponse = await fetch('https://api.github.com/user', {
+      headers,
+      cache: 'no-store',
+    })
+
+    let totalCount = repositories.length
+    if (userResponse.ok) {
+      const user = await userResponse.json()
+      totalCount = user.public_repos + (user.total_private_repos || 0)
+    }
+
+    return NextResponse.json({
+      repositories,
+      total_count: totalCount,
+      page,
+      per_page: perPage,
+    })
   } catch (error) {
-    console.error('Unexpected error fetching GitHub repositories', error)
-    return NextResponse.json({ error: 'Unexpected server error' }, { status: 500 })
+    console.error('Error fetching repositories:', error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to fetch repositories' },
+      { status: 500 }
+    )
   }
 }
-
-
