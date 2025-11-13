@@ -114,9 +114,7 @@ export default async function PullRequestDetailsPage({
   const reviewers = pullRequest.requested_reviewers ?? []
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <div className="flex-1">
-        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
           <div className="mb-6 flex items-center justify-between gap-4">
             <Button variant="ghost" asChild className="px-0 text-muted-foreground hover:text-foreground">
               <Link href={`/dashboard/repositories/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`}>
@@ -316,8 +314,6 @@ export default async function PullRequestDetailsPage({
               )}
             </section>
           </div>
-        </div>
-      </div>
     </div>
   )
 }

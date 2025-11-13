@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 import NavbarVisibility from "@/components/layout/navbar-visibility";
-import FooterSection from "@/components/sections/footer/default";
+import FooterVisibility from "@/components/layout/footer-visibility";
 import { createClient } from "@/lib/supabase/server";
 
 const geistSans = Geist({
@@ -65,14 +65,14 @@ export default async function RootLayout({
           <div className="flex min-h-screen flex-col bg-background">
             <NavbarVisibility user={user} />
             <main className="flex-1">{children}</main>
-            <FooterSection
+            <FooterVisibility
               name="Code Keeper"
               logo={
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-lg">
                   CK
                 </div>
               }
-              columns={footerColumns}
+              footerColumns={footerColumns}
               copyright="© 2025 Code Keeper. All rights reserved."
               policies={[
                 { text: "Privacy Policy", href: "/privacy" },
