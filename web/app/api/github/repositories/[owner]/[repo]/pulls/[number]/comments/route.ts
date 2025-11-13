@@ -43,15 +43,26 @@ export async function GET(
 
     const comments = await response.json()
 
-    // Filter out Codekeeper comments (comments that contain the Codekeeper marker)
-    const nonCodekeeperComments = comments.filter((comment: any) => {
+    // Filter out Codekeeper comments and vercel[bot] comments
+    const filteredComments = comments.filter((comment: any) => {
       const body = comment.body || ''
-      // Check if it's a Codekeeper comment (contains the marker)
-      return !body.includes('<!-- codekeeper:advice:')
+      const userLogin = comment.user?.login || ''
+      
+      // Exclude Codekeeper comments (contains the marker)
+      if (body.includes('<!-- codekeeper:advice:')) {
+        return false
+      }
+      
+      // Exclude vercel[bot] comments
+      if (userLogin === 'vercel[bot]' || userLogin.toLowerCase().includes('vercel')) {
+        return false
+      }
+      
+      return true
     })
 
     return NextResponse.json({
-      comments: nonCodekeeperComments.map((comment: any) => ({
+      comments: filteredComments.map((comment: any) => ({
         id: comment.id,
         body: comment.body,
         created_at: comment.created_at,
