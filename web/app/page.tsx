@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowRightIcon } from "lucide-react";
 import Github from "@/components/logos/github";
 import { redirect } from "next/navigation";
+import { LogoWall } from "@/components/sections/logo-wall";
 
 type HomeSearchParams = {
   code?: string;
@@ -68,6 +69,19 @@ export default async function Home({ searchParams }: HomeProps) {
             className="w-full"
           />
         }
+      />
+
+      {/* Logo Wall Section */}
+      <LogoWall 
+        organizations={[
+          {
+            name: "uoguelph.course",
+            logo: "/Test3.png",
+            alt: "uoguelph.course logo",
+            width: 120,
+            height: 60
+          }
+        ]} 
       />
 
       {/* What It Does Section */}
