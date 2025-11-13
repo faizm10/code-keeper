@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import {
   AlertCircle,
   ArrowLeft,
-  CalendarClock,
   GitBranch,
   GitFork,
   RefreshCcw,
@@ -14,8 +13,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { getGitHubAccessToken } from '@/lib/github/auth'
-import type { RepositoryTreeNode } from '@/components/dashboard/repository-tree'
-import { RepositoryExplorer } from '@/components/dashboard/repository-explorer'
+import { PullRequestsList } from '@/components/dashboard/pull-requests-list'
 
 type GitHubRepoDetails = {
   name: string
@@ -33,12 +31,6 @@ type GitHubRepoDetails = {
     login: string
     avatar_url: string
   }
-}
-
-type GitHubTreeNode = {
-  path: string
-  type: 'blob' | 'tree' | 'commit'
-  size?: number
 }
 
 type GitHubPullRequest = {
@@ -76,16 +68,11 @@ type RepositoryDetailsResponse = {
       avatarUrl: string
     }
   }
-  tree: {
-    truncated: boolean
-    totalCount: number
-    entries: GitHubTreeNode[]
-  }
   pullRequests: Array<{
     id: number
     number: number
     title: string
-    state: string
+    state: 'open' | 'closed'
     draft: boolean
     mergedAt: string | null
     createdAt: string
@@ -99,102 +86,8 @@ type RepositoryDetailsResponse = {
   }>
 }
 
-const MAX_TREE_ENTRIES = 200
 const MAX_PULL_REQUEST_PAGES = 5
 const PULL_REQUESTS_PER_PAGE = 100
-function buildRepositoryTree(entries: GitHubTreeNode[]): RepositoryTreeNode[] {
-  type InternalNode = {
-    name: string
-    path: string
-    type: 'blob' | 'tree'
-    size?: number
-    children?: Map<string, InternalNode>
-  }
-
-  const root = new Map<string, InternalNode>()
-
-  const ensureChild = ({
-    parent,
-    name,
-    path,
-    type,
-    size,
-  }: {
-    parent: Map<string, InternalNode>
-    name: string
-    path: string
-    type: 'blob' | 'tree'
-    size?: number
-  }) => {
-    const existing = parent.get(name)
-    if (existing) {
-      if (type === 'tree') {
-        existing.type = 'tree'
-        if (!existing.children) {
-          existing.children = new Map()
-        }
-      } else if (typeof size === 'number') {
-        existing.size = size
-      }
-      return existing
-    }
-
-    const node: InternalNode = {
-      name,
-      path,
-      type,
-      size,
-      children: type === 'tree' ? new Map() : undefined,
-    }
-
-    parent.set(name, node)
-    return node
-  }
-
-  for (const entry of entries) {
-    const segments = entry.path.split('/')
-    let currentParent = root
-    let currentPath = ''
-
-    segments.forEach((segment, index) => {
-      currentPath = currentPath ? `${currentPath}/${segment}` : segment
-      const isLeaf = index === segments.length - 1
-      const nodeType = isLeaf ? (entry.type === 'tree' ? 'tree' : 'blob') : 'tree'
-      const nodeSize = isLeaf ? entry.size : undefined
-
-      const node = ensureChild({
-        parent: currentParent,
-        name: segment,
-        path: currentPath,
-        type: nodeType,
-        size: nodeSize,
-      })
-
-      if (node.children) {
-        currentParent = node.children
-      }
-    })
-  }
-
-  const toPublicNodes = (map: Map<string, InternalNode>): RepositoryTreeNode[] => {
-    return Array.from(map.values())
-      .sort((a, b) => {
-        if (a.type === b.type) {
-          return a.name.localeCompare(b.name)
-        }
-        return a.type === 'tree' ? -1 : 1
-      })
-      .map((node) => ({
-        name: node.name,
-        path: node.path,
-        type: node.type,
-        size: node.size,
-        children: node.children ? toPublicNodes(node.children) : undefined,
-      }))
-  }
-
-  return toPublicNodes(root)
-}
 
 
 class GitHubAuthError extends Error {}
@@ -231,24 +124,6 @@ async function fetchRepositoryDetails(owner: string, repo: string): Promise<Repo
 
   const repoData = (await repoResponse.json()) as GitHubRepoDetails
 
-  const treeResponse = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(repoData.default_branch)}?recursive=1`,
-    {
-      headers,
-      cache: 'no-store',
-    },
-  )
-
-  let treeEntries: GitHubTreeNode[] = []
-  let treeTruncated = false
-
-  if (treeResponse.ok) {
-    const treeData = await treeResponse.json()
-    const entries = (treeData?.tree ?? []) as GitHubTreeNode[]
-    treeTruncated = Boolean(treeData?.truncated) || entries.length > MAX_TREE_ENTRIES
-    treeEntries = entries.slice(0, MAX_TREE_ENTRIES)
-  }
-
   const pullRequests = await fetchAllPullRequests(owner, repo, headers)
 
   return {
@@ -269,16 +144,11 @@ async function fetchRepositoryDetails(owner: string, repo: string): Promise<Repo
         avatarUrl: repoData.owner.avatar_url,
       },
     },
-    tree: {
-      truncated: treeTruncated,
-      totalCount: treeEntries.length,
-      entries: treeEntries,
-    },
     pullRequests: pullRequests.map((pr) => ({
       id: pr.id,
       number: pr.number,
       title: pr.title,
-      state: pr.state,
+      state: pr.state as 'open' | 'closed',
       draft: pr.draft,
       mergedAt: pr.merged_at,
       createdAt: pr.created_at,
@@ -378,10 +248,7 @@ export default async function RepositoryDetailsPage({
   }
 
   const repository = repositoryDetails?.repository
-  const tree = repositoryDetails?.tree
   const pullRequests = repositoryDetails?.pullRequests ?? []
-  const repositoryTreeNodes = tree ? buildRepositoryTree(tree.entries) : []
-  const treeTruncated = tree?.truncated ?? false
 
   const stats = repository
     ? [
@@ -454,7 +321,7 @@ export default async function RepositoryDetailsPage({
                   </div>
                 </div>
               </div>
-            ) : repository && tree ? (
+            ) : repository ? (
               <>
                 <div className="flex flex-col gap-4">
                   <div>
@@ -499,28 +366,11 @@ export default async function RepositoryDetailsPage({
                   ))}
                 </div>
 
-                <RepositoryExplorer
+                <PullRequestsList
                   owner={owner}
                   repo={repo}
-                  defaultBranch={repository.defaultBranch}
-                  repositoryHtmlUrl={repository.htmlUrl}
-                  treeNodes={repositoryTreeNodes}
-                  treeTruncated={treeTruncated}
                   pullRequests={pullRequests}
                 />
-
-                <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <CalendarClock className="h-5 w-5 text-primary" />
-                    <div>
-                      <p className="font-semibold">Need more detail?</p>
-                      <p className="text-sm text-muted-foreground">
-                        We only show a subset of the file tree and the 20 most recent pull requests.
-                        For full insights, open the repository on GitHub or adjust this view in future releases.
-                      </p>
-                    </div>
-                  </div>
-                </div>
               </>
             ) : null}
           </div>
