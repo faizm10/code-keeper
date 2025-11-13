@@ -19,6 +19,8 @@ import { getGitHubAccessToken } from '@/lib/github/auth'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Markdown } from '@/components/ui/markdown'
+import { PRAdviceButton } from '@/components/dashboard/pr-advice-button'
+import { PRAdviceDisplay } from '@/components/dashboard/pr-advice-display'
 
 type RouteParams = {
   owner: string
@@ -123,11 +125,16 @@ export default async function PullRequestDetailsPage({
                 Back to repository
               </Link>
             </Button>
-            <Button asChild variant="outline" size="sm">
-              <Link href={pullRequest.html_url} target="_blank" rel="noreferrer">
-                View on GitHub
-              </Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              {pullRequest.state === 'open' && (
+                <PRAdviceButton owner={owner} repo={repo} prNumber={pullRequest.number} />
+              )}
+              <Button asChild variant="outline" size="sm">
+                <Link href={pullRequest.html_url} target="_blank" rel="noreferrer">
+                  View on GitHub
+                </Link>
+              </Button>
+            </div>
           </div>
 
           <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
@@ -226,6 +233,16 @@ export default async function PullRequestDetailsPage({
                 </article>
               </div>
             )}
+          </div>
+
+          <div className="mt-6">
+            <PRAdviceDisplay 
+              owner={owner} 
+              repo={repo} 
+              prNumber={pullRequest.number}
+              initialHeadSha={pullRequest.head.sha}
+              initialCommits={pullRequest.commits}
+            />
           </div>
 
           <div className="mt-10 grid gap-6 lg:grid-cols-2">
