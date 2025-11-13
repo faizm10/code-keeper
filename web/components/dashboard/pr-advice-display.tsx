@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { MessageSquare, CheckCircle2, AlertCircle, Loader2, ExternalLink, Copy, Check, GitCommit } from 'lucide-react'
+import { MessageSquare, CheckCircle2, AlertCircle, Loader2, ExternalLink, Copy, Check, GitCommit, User as UserIcon } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -21,7 +21,21 @@ type PRAdvice = {
     suggestions?: Array<{ file: string; reason: string }>
     changelogSuggestion?: string
     changedFilesCount?: number
+    fullCommentBody?: string
   } | null
+}
+
+type PRComment = {
+  id: number
+  body: string
+  created_at: string
+  updated_at: string
+  user: {
+    login: string
+    avatar_url: string | null
+    html_url: string
+  }
+  html_url: string
 }
 
 interface PRAdviceDisplayProps {
@@ -79,12 +93,45 @@ export function PRAdviceDisplay({ owner, repo, prNumber, initialHeadSha, initial
   const [copied, setCopied] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [hasNewCommits, setHasNewCommits] = useState(false)
+  const [fullCommentBody, setFullCommentBody] = useState<string | null>(null)
+  const [loadingComment, setLoadingComment] = useState(false)
+  const [prComments, setPrComments] = useState<PRComment[]>([])
+  const [loadingComments, setLoadingComments] = useState(false)
   
   // Track current PR state
   const currentHeadShaRef = useRef<string | undefined>(initialHeadSha)
   const currentCommitsRef = useRef<number | undefined>(initialCommits)
+  
+  // Track if we've already fetched the comment to prevent multiple calls
+  const commentFetchedRef = useRef<number | null>(null)
+  const commentsFetchedRef = useRef<boolean>(false)
 
   const repoFullName = `${owner}/${repo}`
+
+  const fetchCommentFromGitHub = useCallback(async (commentId: number) => {
+    // Prevent fetching the same comment multiple times
+    if (commentFetchedRef.current === commentId || loadingComment || fullCommentBody) {
+      return
+    }
+    
+    commentFetchedRef.current = commentId
+    try {
+      setLoadingComment(true)
+      const response = await fetch(
+        `/api/github/repositories/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls/${prNumber}/comments/${commentId}`
+      )
+
+      if (response.ok) {
+        const data = await response.json()
+        setFullCommentBody(data.body)
+      }
+    } catch (error) {
+      console.error('Error fetching comment from GitHub:', error)
+      commentFetchedRef.current = null // Reset on error so we can retry
+    } finally {
+      setLoadingComment(false)
+    }
+  }, [owner, repo, prNumber, loadingComment, fullCommentBody])
 
   const fetchAdvice = useCallback(async (silent = false) => {
     try {
@@ -100,6 +147,17 @@ export function PRAdviceDisplay({ owner, repo, prNumber, initialHeadSha, initial
       if (response.ok) {
         const data = await response.json()
         setAdvice(data.advice)
+        
+        // If we have a comment ID but no full comment body, fetch it from GitHub
+        if (data.advice?.github_comment_id && !data.advice?.logs?.fullCommentBody && !fullCommentBody) {
+          // Only fetch if we haven't already fetched this comment
+          if (commentFetchedRef.current !== data.advice.github_comment_id) {
+            fetchCommentFromGitHub(data.advice.github_comment_id)
+          }
+        } else if (data.advice?.logs?.fullCommentBody) {
+          setFullCommentBody(data.advice.logs.fullCommentBody)
+          commentFetchedRef.current = data.advice.github_comment_id || null
+        }
       }
     } catch (error) {
       console.error('Error fetching PR advice:', error)
@@ -110,7 +168,32 @@ export function PRAdviceDisplay({ owner, repo, prNumber, initialHeadSha, initial
         setIsRefreshing(false)
       }
     }
-  }, [owner, repo, prNumber])
+  }, [owner, repo, prNumber, fetchCommentFromGitHub])
+
+  const fetchPRComments = useCallback(async () => {
+    // Prevent fetching multiple times
+    if (commentsFetchedRef.current || loadingComments) {
+      return
+    }
+    
+    commentsFetchedRef.current = true
+    try {
+      setLoadingComments(true)
+      const response = await fetch(
+        `/api/github/repositories/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls/${prNumber}/comments`
+      )
+
+      if (response.ok) {
+        const data = await response.json()
+        setPrComments(data.comments || [])
+      }
+    } catch (error) {
+      console.error('Error fetching PR comments:', error)
+      commentsFetchedRef.current = false // Reset on error
+    } finally {
+      setLoadingComments(false)
+    }
+  }, [owner, repo, prNumber, loadingComments])
 
   const checkForNewCommits = useCallback(async () => {
     try {
@@ -149,7 +232,27 @@ export function PRAdviceDisplay({ owner, repo, prNumber, initialHeadSha, initial
 
   useEffect(() => {
     fetchAdvice()
-  }, [fetchAdvice])
+    fetchPRComments()
+  }, [fetchAdvice, fetchPRComments])
+
+  // Fetch comment from GitHub if we have comment ID but no body (only once)
+  useEffect(() => {
+    if (!advice?.github_comment_id || fullCommentBody || loadingComment) {
+      return
+    }
+    
+    // If we already have the full comment body in logs, use it
+    if (advice.logs?.fullCommentBody) {
+      setFullCommentBody(advice.logs.fullCommentBody)
+      commentFetchedRef.current = advice.github_comment_id
+      return
+    }
+    
+    // Only fetch if we haven't already fetched this comment ID
+    if (commentFetchedRef.current !== advice.github_comment_id) {
+      fetchCommentFromGitHub(advice.github_comment_id)
+    }
+  }, [advice?.github_comment_id, advice?.logs?.fullCommentBody, fullCommentBody, loadingComment, fetchCommentFromGitHub])
 
   // Poll for updates every 5 seconds if no advice yet
   useEffect(() => {
@@ -261,8 +364,79 @@ export function PRAdviceDisplay({ owner, repo, prNumber, initialHeadSha, initial
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="rounded-lg border border-border bg-card p-4">
-          <Markdown content={markdown} />
+        <div className="grid gap-4 lg:grid-cols-2">
+          {/* Left Column: PR Comments (excluding Codekeeper) */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                PR Comments
+              </h3>
+              {loadingComments && (
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              )}
+            </div>
+            <div className="rounded-lg border border-border bg-card p-4 min-h-[200px] max-h-[600px] overflow-y-auto space-y-4">
+              {loadingComments ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : prComments.length === 0 ? (
+                <div className="text-sm text-muted-foreground italic text-center py-8">
+                  No comments yet (excluding Codekeeper advice)
+                </div>
+              ) : (
+                prComments.map((comment) => (
+                  <div key={comment.id} className="border-b border-border/50 pb-4 last:border-0 last:pb-0">
+                    <div className="flex items-start gap-3 mb-2">
+                      {comment.user.avatar_url && (
+                        <img
+                          src={comment.user.avatar_url}
+                          alt={comment.user.login}
+                          className="w-8 h-8 rounded-full"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <a
+                            href={comment.user.html_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="font-semibold text-sm hover:underline"
+                          >
+                            {comment.user.login}
+                          </a>
+                          <span className="text-xs text-muted-foreground">
+                            {formatDate(comment.created_at)}
+                          </span>
+                        </div>
+                        <div className="text-sm prose prose-sm dark:prose-invert max-w-none">
+                          <Markdown content={comment.body} />
+                        </div>
+                      </div>
+                      <a
+                        href={comment.html_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Right Column: Structured Analysis */}
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              Analysis Summary
+            </h3>
+            <div className="rounded-lg border border-border bg-card p-4 min-h-[200px]">
+              <Markdown content={markdown} />
+            </div>
+          </div>
         </div>
 
         {advice.logs && (

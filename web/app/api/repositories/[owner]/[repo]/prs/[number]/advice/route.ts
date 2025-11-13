@@ -442,6 +442,7 @@ export async function POST(
             suggestions: advice.docSuggestions,
             changelogSuggestion: advice.changelogSuggestion,
             changedFilesCount: changedFiles.length,
+            fullCommentBody: commentBody, // Store the full comment body
           },
         })
         .eq('id', prRunId)
