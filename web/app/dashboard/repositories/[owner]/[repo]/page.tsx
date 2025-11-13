@@ -16,6 +16,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { getGitHubAccessToken } from '@/lib/github/auth'
 import { PullRequestsList } from '@/components/dashboard/pull-requests-list'
 import { RepoHealth } from '@/components/dashboard/repo-health'
+import { RepoAnalysis } from '@/components/dashboard/repo-analysis'
 
 type GitHubRepoDetails = {
   name: string
@@ -373,6 +374,7 @@ export default async function RepositoryDetailsPage({
                     <TabsTrigger value="overview">Overview</TabsTrigger>
                     <TabsTrigger value="pulls">Pull Requests</TabsTrigger>
                     <TabsTrigger value="health">Health</TabsTrigger>
+                    <TabsTrigger value="analyze">Analyze</TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="overview">
@@ -394,6 +396,10 @@ export default async function RepositoryDetailsPage({
 
                   <TabsContent value="health">
                     <RepoHealth owner={owner} repo={repo} />
+                  </TabsContent>
+
+                  <TabsContent value="analyze">
+                    <RepoAnalysis owner={owner} repo={repo} />
                   </TabsContent>
                 </Tabs>
               </>
