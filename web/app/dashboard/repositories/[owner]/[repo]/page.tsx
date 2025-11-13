@@ -17,6 +17,7 @@ import { getGitHubAccessToken } from '@/lib/github/auth'
 import { PullRequestsList } from '@/components/dashboard/pull-requests-list'
 import { RepoHealth } from '@/components/dashboard/repo-health'
 import { RepoAnalysis } from '@/components/dashboard/repo-analysis'
+import { PRRunsList } from '@/components/dashboard/pr-runs-list'
 
 type GitHubRepoDetails = {
   name: string
@@ -402,6 +403,11 @@ export default async function RepositoryDetailsPage({
                     <RepoAnalysis owner={owner} repo={repo} />
                   </TabsContent>
                 </Tabs>
+
+                {/* PR Runs Section */}
+                <div className="mt-8">
+                  <PRRunsList owner={owner} repo={repo} />
+                </div>
               </>
             ) : null}
           </div>

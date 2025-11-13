@@ -26,6 +26,32 @@ Creates the `repo_analyses` table to store repository analysis runs performed by
 **Indexes:**
 - Indexed on `user_id`, `repo_full_name`, and `run_at` for fast queries
 
+### 002_create_pr_runs_table.sql
+
+Creates the `pr_runs` table to store PR advice runs and other PR-related analysis runs.
+
+**Table Structure:**
+- `id` (UUID): Primary key
+- `user_id` (UUID): Reference to auth.users
+- `repo_full_name` (TEXT): Full repository name in format `owner/repo`
+- `pr_number` (INTEGER): GitHub PR number
+- `run_type` (TEXT): Type of run (e.g., 'advice', 'analysis')
+- `status` (TEXT): Run status ('pending', 'running', 'completed', 'failed')
+- `created_at` (TIMESTAMPTZ): Record creation timestamp
+- `started_at` (TIMESTAMPTZ): When the run started
+- `completed_at` (TIMESTAMPTZ): When the run completed
+- `logs` (JSONB): Run results, suggestions, errors, etc.
+- `github_comment_id` (BIGINT): GitHub comment ID if a comment was posted
+- `base_sha` (TEXT): Base SHA of the PR
+- `head_sha` (TEXT): Head SHA of the PR
+
+**Security:**
+- Row Level Security (RLS) enabled
+- Users can only view, insert, update, and delete their own PR runs
+
+**Indexes:**
+- Indexed on `user_id`, `repo_full_name`, `pr_number`, `status`, and `created_at` for fast queries
+
 ## How to Run
 
 ### Using Supabase CLI
