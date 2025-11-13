@@ -105,12 +105,21 @@ export async function GET(request: Request) {
 
     // Otherwise, use the repos API
     const url = new URL('https://api.github.com/user/repos')
-    url.searchParams.set('type', type)
     url.searchParams.set('sort', sort)
     url.searchParams.set('direction', direction)
     url.searchParams.set('per_page', perPage.toString())
     url.searchParams.set('page', page.toString())
-    url.searchParams.set('affiliation', 'owner,collaborator,organization_member')
+    
+    // Use affiliation instead of type (they're mutually exclusive)
+    // Convert type filter to affiliation
+    if (type === 'owner') {
+      url.searchParams.set('affiliation', 'owner')
+    } else if (type === 'member') {
+      url.searchParams.set('affiliation', 'collaborator,organization_member')
+    } else {
+      // type === 'all' - include all affiliations
+      url.searchParams.set('affiliation', 'owner,collaborator,organization_member')
+    }
 
     const response = await fetch(url.toString(), {
       headers,
