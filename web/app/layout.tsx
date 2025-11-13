@@ -42,13 +42,11 @@ const footerColumns = [
     ],
   },
 ];
-
 export const metadata: Metadata = {
   title: "Code Keeper - Organize Your Code Repositories & Snippets",
   description: "A modern platform for managing code repositories, snippets, and development resources. Built for developers who value organization and efficiency.",
   keywords: ["code management", "code repositories", "code snippets", "developer tools", "code organization"],
 };
-
 export default async function RootLayout({
   children,
 }: Readonly<{
