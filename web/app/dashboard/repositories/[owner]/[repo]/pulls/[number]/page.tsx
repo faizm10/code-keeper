@@ -20,6 +20,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Markdown } from '@/components/ui/markdown'
 import { PRAdviceButton } from '@/components/dashboard/pr-advice-button'
+import { PRAdviceDisplay } from '@/components/dashboard/pr-advice-display'
 
 type RouteParams = {
   owner: string
@@ -232,6 +233,10 @@ export default async function PullRequestDetailsPage({
                 </article>
               </div>
             )}
+          </div>
+
+          <div className="mt-6">
+            <PRAdviceDisplay owner={owner} repo={repo} prNumber={pullRequest.number} />
           </div>
 
           <div className="mt-10 grid gap-6 lg:grid-cols-2">
