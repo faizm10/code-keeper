@@ -18,6 +18,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getGitHubAccessToken } from '@/lib/github/auth'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Markdown } from '@/components/ui/markdown'
 
 type RouteParams = {
   owner: string
@@ -220,8 +221,8 @@ export default async function PullRequestDetailsPage({
             {pullRequest.body && (
               <div className="mt-8 space-y-4">
                 <h2 className="text-lg font-semibold">Description</h2>
-                <article className="whitespace-pre-line rounded-lg border border-border bg-muted/30 p-4 text-sm leading-relaxed text-muted-foreground">
-                  {pullRequest.body}
+                <article className="rounded-lg border border-border bg-muted/30 p-4">
+                  <Markdown content={pullRequest.body} />
                 </article>
               </div>
             )}
