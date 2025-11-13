@@ -19,12 +19,15 @@ type GitHubRepository = {
   html_url: string
   pushed_at: string
   updated_at: string
+  created_at: string
   owner: {
     login: string
     avatar_url: string
     html_url: string
   }
-  topics: string[]
+  topics?: string[]
+  archived?: boolean
+  disabled?: boolean
 }
 
 async function fetchInitialRepositories() {

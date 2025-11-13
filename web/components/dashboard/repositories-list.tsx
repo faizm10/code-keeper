@@ -262,7 +262,7 @@ export function RepositoriesList({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={fetchRepositories}
+                  onClick={() => fetchRepositories()}
                   className="mt-2"
                 >
                   Try Again
