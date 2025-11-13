@@ -236,7 +236,13 @@ export default async function PullRequestDetailsPage({
           </div>
 
           <div className="mt-6">
-            <PRAdviceDisplay owner={owner} repo={repo} prNumber={pullRequest.number} />
+            <PRAdviceDisplay 
+              owner={owner} 
+              repo={repo} 
+              prNumber={pullRequest.number}
+              initialHeadSha={pullRequest.head.sha}
+              initialCommits={pullRequest.commits}
+            />
           </div>
 
           <div className="mt-10 grid gap-6 lg:grid-cols-2">

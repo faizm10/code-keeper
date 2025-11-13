@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { MessageSquare, CheckCircle2, AlertCircle, Loader2, ExternalLink, Copy, Check } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { MessageSquare, CheckCircle2, AlertCircle, Loader2, ExternalLink, Copy, Check, GitCommit } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -28,6 +28,8 @@ interface PRAdviceDisplayProps {
   owner: string
   repo: string
   prNumber: number
+  initialHeadSha?: string
+  initialCommits?: number
 }
 
 function formatDate(dateString: string) {
@@ -71,16 +73,26 @@ function generateAdviceMarkdown(advice: PRAdvice): string {
   return parts.join('\n')
 }
 
-export function PRAdviceDisplay({ owner, repo, prNumber }: PRAdviceDisplayProps) {
+export function PRAdviceDisplay({ owner, repo, prNumber, initialHeadSha, initialCommits }: PRAdviceDisplayProps) {
   const [advice, setAdvice] = useState<PRAdvice | null>(null)
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [hasNewCommits, setHasNewCommits] = useState(false)
+  
+  // Track current PR state
+  const currentHeadShaRef = useRef<string | undefined>(initialHeadSha)
+  const currentCommitsRef = useRef<number | undefined>(initialCommits)
 
   const repoFullName = `${owner}/${repo}`
 
-  const fetchAdvice = useCallback(async () => {
+  const fetchAdvice = useCallback(async (silent = false) => {
     try {
-      setLoading(true)
+      if (!silent) {
+        setLoading(true)
+      } else {
+        setIsRefreshing(true)
+      }
       const response = await fetch(
         `/api/repositories/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/prs/${prNumber}/advice/latest`
       )
@@ -92,9 +104,48 @@ export function PRAdviceDisplay({ owner, repo, prNumber }: PRAdviceDisplayProps)
     } catch (error) {
       console.error('Error fetching PR advice:', error)
     } finally {
-      setLoading(false)
+      if (!silent) {
+        setLoading(false)
+      } else {
+        setIsRefreshing(false)
+      }
     }
   }, [owner, repo, prNumber])
+
+  const checkForNewCommits = useCallback(async () => {
+    try {
+      const response = await fetch(
+        `/api/github/repositories/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls/${prNumber}/check`
+      )
+
+      if (response.ok) {
+        const data = await response.json()
+        const newHeadSha = data.head_sha
+        const newCommits = data.commits
+
+        // Check if head SHA changed (new commits)
+        if (newHeadSha && currentHeadShaRef.current && newHeadSha !== currentHeadShaRef.current) {
+          setHasNewCommits(true)
+          currentHeadShaRef.current = newHeadSha
+          currentCommitsRef.current = newCommits
+          
+          // Silently refresh advice
+          await fetchAdvice(true)
+          
+          // Clear the indicator after a few seconds
+          setTimeout(() => {
+            setHasNewCommits(false)
+          }, 5000)
+        } else if (!currentHeadShaRef.current) {
+          // Initialize refs on first check
+          currentHeadShaRef.current = newHeadSha
+          currentCommitsRef.current = newCommits
+        }
+      }
+    } catch (error) {
+      console.error('Error checking for new commits:', error)
+    }
+  }, [owner, repo, prNumber, fetchAdvice])
 
   useEffect(() => {
     fetchAdvice()
@@ -110,6 +161,20 @@ export function PRAdviceDisplay({ owner, repo, prNumber }: PRAdviceDisplayProps)
     
     return () => clearInterval(interval)
   }, [advice, fetchAdvice])
+
+  // Check for new commits every 30 seconds
+  useEffect(() => {
+    if (!advice) return // Only check if we already have advice
+
+    const interval = setInterval(() => {
+      checkForNewCommits()
+    }, 30000) // Check every 30 seconds
+
+    // Also check immediately after advice is loaded
+    checkForNewCommits()
+
+    return () => clearInterval(interval)
+  }, [advice, checkForNewCommits])
 
   const handleCopy = async () => {
     if (!advice) return
@@ -155,6 +220,21 @@ export function PRAdviceDisplay({ owner, repo, prNumber }: PRAdviceDisplayProps)
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {hasNewCommits && (
+              <Badge 
+                variant="outline" 
+                className="bg-blue-500/10 text-blue-500 border-blue-500/20 animate-pulse"
+              >
+                <GitCommit className="mr-1 h-3 w-3" />
+                New commits detected
+              </Badge>
+            )}
+            {isRefreshing && (
+              <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                Updating...
+              </Badge>
+            )}
             <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
               <CheckCircle2 className="mr-1 h-3 w-3" />
               Completed
@@ -208,11 +288,21 @@ export function PRAdviceDisplay({ owner, repo, prNumber }: PRAdviceDisplayProps)
             <Button
               variant="ghost"
               size="sm"
-              onClick={fetchAdvice}
+              onClick={() => fetchAdvice(false)}
               className="h-8 text-xs"
+              disabled={isRefreshing}
             >
-              <Loader2 className="mr-1 h-3 w-3" />
-              Refresh
+              {isRefreshing ? (
+                <>
+                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                  Refreshing...
+                </>
+              ) : (
+                <>
+                  <Loader2 className="mr-1 h-3 w-3" />
+                  Refresh
+                </>
+              )}
             </Button>
           </div>
         )}
