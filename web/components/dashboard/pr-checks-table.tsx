@@ -14,6 +14,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import Link from 'next/link'
 
 type PRCheck = {
@@ -115,9 +116,34 @@ export function PRChecksTable({ owner, repo }: PRChecksTableProps) {
   if (loading) {
     return (
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <CardHeader>
+          <Skeleton className="h-6 w-32" />
+          <Skeleton className="h-4 w-64 mt-2" />
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {/* Table Header Skeleton */}
+            <div className="border-b border-border pb-3">
+              <div className="grid grid-cols-7 gap-4">
+                {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+                  <Skeleton key={i} className="h-4 w-full" />
+                ))}
+              </div>
+            </div>
+            {/* Table Rows Skeleton */}
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="border-b border-border/50 pb-3">
+                <div className="grid grid-cols-7 gap-4">
+                  <Skeleton className="h-4 w-12" />
+                  <Skeleton className="h-4 w-8" />
+                  <Skeleton className="h-4 w-8" />
+                  <Skeleton className="h-5 w-12 rounded-full" />
+                  <Skeleton className="h-5 w-12 rounded-full" />
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                </div>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>

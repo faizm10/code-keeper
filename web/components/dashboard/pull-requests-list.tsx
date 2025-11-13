@@ -15,6 +15,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
 type PullRequestSummary = {
@@ -38,12 +39,71 @@ interface PullRequestsListProps {
   owner: string
   repo: string
   pullRequests: PullRequestSummary[]
+  loading?: boolean
 }
 
 type FilterType = 'all' | 'open' | 'closed'
 
-export function PullRequestsList({ owner, repo, pullRequests }: PullRequestsListProps) {
+export function PullRequestsList({ owner, repo, pullRequests, loading = false }: PullRequestsListProps) {
   const [filter, setFilter] = useState<FilterType>('all')
+  
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        {/* Stats and Filters Skeleton */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-5 w-32" />
+            <div className="flex items-center gap-4">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-16" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-9 w-20" />
+            <Skeleton className="h-9 w-20" />
+            <Skeleton className="h-9 w-20" />
+          </div>
+        </div>
+
+        {/* Pull Requests Cards Skeleton */}
+        <div className="space-y-3">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <Card key={i}>
+              <CardContent className="pt-6">
+                <div className="space-y-4">
+                  {/* Header Skeleton */}
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <Skeleton className="h-5 w-5 rounded mt-1" />
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="h-5 w-16 rounded-full" />
+                          <Skeleton className="h-6 w-3/4" />
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Skeleton className="h-3 w-20" />
+                          <Skeleton className="h-3 w-24" />
+                          <Skeleton className="h-3 w-24" />
+                        </div>
+                      </div>
+                    </div>
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                  </div>
+
+                  {/* Actions Skeleton */}
+                  <div className="flex items-center gap-3 pt-3 border-t border-border/50">
+                    <Skeleton className="h-8 w-24" />
+                    <Skeleton className="h-8 w-28" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   const filteredPRs = useMemo(() => {
     if (filter === 'all') return pullRequests

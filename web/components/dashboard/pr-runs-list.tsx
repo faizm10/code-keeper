@@ -14,6 +14,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
 type PRRun = {
@@ -111,13 +112,48 @@ export function PRRunsList({ owner, repo }: PRRunsListProps) {
 
   if (loading) {
     return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Skeleton className="h-6 w-40" />
+          <Skeleton className="h-4 w-64" />
+        </div>
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <Card key={i}>
+              <CardContent className="pt-6">
+                <div className="space-y-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 space-y-3">
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="h-5 w-5 rounded" />
+                        <div className="flex-1 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Skeleton className="h-5 w-20" />
+                            <Skeleton className="h-5 w-16 rounded-full" />
+                          </div>
+                          <Skeleton className="h-3 w-24" />
+                        </div>
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        <Skeleton className="h-4 w-32" />
+                        <div className="flex flex-wrap gap-2">
+                          {[1, 2, 3].map((j) => (
+                            <Skeleton key={j} className="h-5 w-16 rounded-full" />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 pt-2 border-t border-border/50">
+                    <Skeleton className="h-8 w-20" />
+                    <Skeleton className="h-8 w-24" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
     )
   }
 

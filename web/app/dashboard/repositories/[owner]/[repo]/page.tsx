@@ -13,6 +13,8 @@ import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Card, CardContent } from '@/components/ui/card'
 import { getGitHubAccessToken } from '@/lib/github/auth'
 import { PullRequestsList } from '@/components/dashboard/pull-requests-list'
 import { RepoHealth } from '@/components/dashboard/repo-health'
@@ -380,12 +382,66 @@ export default async function RepositoryDetailsPage({
                   </TabsList>
 
                   <TabsContent value="overview">
-                    <div className="rounded-lg border border-border bg-card p-6">
-                      <h2 className="text-lg font-semibold mb-4">Repository Overview</h2>
-                      <p className="text-sm text-muted-foreground">
-                        This repository has {pullRequests.length} pull request{pullRequests.length !== 1 ? 's' : ''} and is actively maintained.
-                      </p>
-                    </div>
+                    {!repository ? (
+                      <Card>
+                        <CardContent className="pt-6">
+                          <div className="space-y-4">
+                            <Skeleton className="h-6 w-48" />
+                            <Skeleton className="h-4 w-full" />
+                            <Skeleton className="h-4 w-3/4" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      <Card>
+                        <CardContent className="pt-6">
+                          <h2 className="text-lg font-semibold mb-4">Repository Overview</h2>
+                          <p className="text-sm text-muted-foreground mb-4">
+                            This repository has {pullRequests.length} pull request{pullRequests.length !== 1 ? 's' : ''} and is actively maintained.
+                          </p>
+                          <div className="grid gap-4 sm:grid-cols-2 mt-6">
+                            <div className="space-y-2">
+                              <h3 className="text-sm font-semibold">Repository Details</h3>
+                              <div className="space-y-2 text-sm text-muted-foreground">
+                                <div className="flex items-center justify-between">
+                                  <span>Default Branch</span>
+                                  <span className="font-mono font-medium">{repository.defaultBranch}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span>Visibility</span>
+                                  <Badge variant={repository.private ? 'secondary' : 'outline'}>
+                                    {repository.private ? 'Private' : 'Public'}
+                                  </Badge>
+                                </div>
+                                {repository.language && (
+                                  <div className="flex items-center justify-between">
+                                    <span>Primary Language</span>
+                                    <Badge variant="outline">{repository.language}</Badge>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <h3 className="text-sm font-semibold">Statistics</h3>
+                              <div className="space-y-2 text-sm text-muted-foreground">
+                                <div className="flex items-center justify-between">
+                                  <span>Stars</span>
+                                  <span className="font-semibold">{repository.stars}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span>Forks</span>
+                                  <span className="font-semibold">{repository.forks}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span>Open Issues</span>
+                                  <span className="font-semibold">{repository.openIssues}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
                   </TabsContent>
 
                   <TabsContent value="pulls">
