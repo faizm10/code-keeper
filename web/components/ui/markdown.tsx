@@ -3,6 +3,7 @@
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { cn } from '@/lib/utils'
+import { MarkdownImage } from './markdown-image'
 
 interface MarkdownProps {
   content: string
@@ -80,9 +81,14 @@ export function Markdown({ content, className }: MarkdownProps) {
           td: ({ node, ...props }) => (
             <td className="border border-border px-4 py-2" {...props} />
           ),
-          // Customize images
-          img: ({ node, ...props }) => (
-            <img className="max-w-full h-auto rounded-lg my-4" {...props} />
+          // Customize images - use custom component to handle external URLs
+          img: ({ node, src, alt, title, ...props }: any) => (
+            <MarkdownImage
+              src={src}
+              alt={alt}
+              title={title}
+              className="max-w-full"
+            />
           ),
         }}
       >
