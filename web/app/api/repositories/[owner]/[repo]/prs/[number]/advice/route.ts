@@ -50,6 +50,10 @@ type PRAdviceResult = {
   importantCodeChanged: boolean
   docsChanged: boolean
   docSuggestions: PRAdviceSuggestion[]
+  allFiles: Array<{
+    path: string
+    status: 'added' | 'modified' | 'removed' | 'renamed'
+  }>
 }
 
 /**
@@ -117,13 +121,17 @@ function analyzePRChanges(files: GitHubPRFile[]): PRAdviceResult {
   const codeFiles: string[] = []
   const docFiles: string[] = []
   
-  // Step 1: Classify each file
+  // Step 1: Classify each file (excluding removed files from classification)
+  // but including them in the allFiles list for display
   for (const file of files) {
-    const classification = classifyFile(file.filename)
-    if (classification === 'code') {
-      codeFiles.push(file.filename)
-    } else if (classification === 'docs') {
-      docFiles.push(file.filename)
+    // Only classify non-removed files for code/docs detection
+    if (file.status !== 'removed') {
+      const classification = classifyFile(file.filename)
+      if (classification === 'code') {
+        codeFiles.push(file.filename)
+      } else if (classification === 'docs') {
+        docFiles.push(file.filename)
+      }
     }
   }
   
@@ -164,12 +172,19 @@ function analyzePRChanges(files: GitHubPRFile[]): PRAdviceResult {
     }
   }
   
+  // Collect all files with their status
+  const allFiles = files.map(f => ({
+    path: f.filename,
+    status: f.status,
+  }))
+
   return {
     codeFiles,
     docFiles,
     importantCodeChanged,
     docsChanged,
     docSuggestions,
+    allFiles,
   }
 }
 
@@ -191,6 +206,34 @@ function generateCommentBody(
     return null
   }
   
+  // Helper function to format file list
+  const formatFileList = (files: typeof advice.allFiles) => {
+    const added = files.filter(f => f.status === 'added')
+    const modified = files.filter(f => f.status === 'modified')
+    const removed = files.filter(f => f.status === 'removed')
+    const renamed = files.filter(f => f.status === 'renamed')
+    
+    let list = ''
+    
+    if (added.length > 0) {
+      list += `\n### Added\n${added.map(f => `- \`${f.path}\``).join('\n')}\n`
+    }
+    
+    if (modified.length > 0) {
+      list += `\n### Modified\n${modified.map(f => `- \`${f.path}\``).join('\n')}\n`
+    }
+    
+    if (removed.length > 0) {
+      list += `\n### Removed\n${removed.map(f => `- \`${f.path}\``).join('\n')}\n`
+    }
+    
+    if (renamed.length > 0) {
+      list += `\n### Renamed\n${renamed.map(f => `- \`${f.path}\``).join('\n')}\n`
+    }
+    
+    return list
+  }
+
   // Case 1: Code + Docs changed → positive comment
   if (advice.importantCodeChanged && advice.docsChanged) {
     return `<!-- codekeeper:advice:v1 -->
@@ -199,8 +242,12 @@ function generateCommentBody(
 
 Nice! I see you updated docs along with code changes 👌
 
-**Code files changed:** ${advice.codeFiles.length}
+**Code files changed:** ${advice.codeFiles.length}  
 **Docs files updated:** ${advice.docFiles.length}
+
+### Files changed
+
+${formatFileList(advice.allFiles)}
 
 Keep up the good work!
 `
@@ -214,7 +261,9 @@ Keep up the good work!
 
 I noticed code changes but no documentation was updated in this PR.
 
-**Code files changed:** ${advice.codeFiles.slice(0, 5).map(f => `\`${f}\``).join(', ')}${advice.codeFiles.length > 5 ? ` and ${advice.codeFiles.length - 5} more` : ''}
+### Files changed
+
+${formatFileList(advice.allFiles)}
 
 If this affects users or the public API, consider updating:
 
@@ -380,11 +429,9 @@ export async function POST(
 
     const files = (await filesResponse.json()) as GitHubPRFile[]
 
-    // Filter out deleted files for analysis (we only care about added/modified)
-    const changedFiles = files.filter((f) => f.status !== 'removed')
-
     // 3. Analyze changes using simple classification
-    const advice = analyzePRChanges(changedFiles)
+    // Include all files (added, modified, removed, renamed) for display
+    const advice = analyzePRChanges(files)
 
     // 4. Generate comment body (may return null for docs-only PRs)
     const commentBody = generateCommentBody(repoFullName, prNumber, pr.title, advice)
@@ -476,7 +523,7 @@ export async function POST(
             importantCodeChanged: advice.importantCodeChanged,
             docsChanged: advice.docsChanged,
             suggestions: advice.docSuggestions,
-            changedFilesCount: changedFiles.length,
+            changedFilesCount: advice.allFiles.length,
             fullCommentBody: commentBody, // Store the full comment body
           },
         })
