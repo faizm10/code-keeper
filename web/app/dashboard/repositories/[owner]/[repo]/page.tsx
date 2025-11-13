@@ -13,7 +13,6 @@ import {
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { DashboardFooter } from '@/components/dashboard/dashboard-footer'
 import { getGitHubAccessToken } from '@/lib/github/auth'
 import type { RepositoryTreeNode } from '@/components/dashboard/repository-tree'
 import { RepositoryExplorer } from '@/components/dashboard/repository-explorer'
@@ -410,9 +409,7 @@ export default async function RepositoryDetailsPage({
     : []
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <div className="flex-1">
-        <div className="max-w-7xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
+    <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-6">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <Button variant="ghost" asChild className="px-0 text-muted-foreground hover:text-foreground">
@@ -527,9 +524,6 @@ export default async function RepositoryDetailsPage({
               </>
             ) : null}
           </div>
-        </div>
-      </div>
-      <DashboardFooter className="mt-0" />
     </div>
   )
 }
