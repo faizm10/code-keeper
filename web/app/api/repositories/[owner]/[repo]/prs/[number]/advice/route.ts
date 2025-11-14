@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server'
 import { getGitHubAccessToken } from '@/lib/github/auth'
 import { createClient } from '@/lib/supabase/server'
+import {
+  analyzePullRequestWithGemini,
+  GeminiPRAnalysis,
+  PRFileForGemini,
+} from '@/lib/gemini/pr-advice'
+import { classifyFile } from '@/lib/pr/file-classification'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,6 +23,7 @@ type GitHubPR = {
   number: number
   title: string
   state: string
+  body?: string | null
   base: {
     sha: string
     ref: string
@@ -44,129 +51,118 @@ type PRAdviceSuggestion = {
   reason: string
 }
 
+type ChangedFileEntry = {
+  path: string
+  status: 'added' | 'modified' | 'removed' | 'renamed'
+}
+
 type PRAdviceResult = {
   codeFiles: string[]
   docFiles: string[]
   importantCodeChanged: boolean
   docsChanged: boolean
   docSuggestions: PRAdviceSuggestion[]
-  allFiles: Array<{
-    path: string
-    status: 'added' | 'modified' | 'removed' | 'renamed'
-  }>
+  allFiles: ChangedFileEntry[]
 }
 
-/**
- * Check if a file should be ignored (tests, stories, generated files, etc.)
- */
-function shouldIgnoreFile(filename: string): boolean {
-  const lowerFilename = filename.toLowerCase()
-  
-  // Test files
-  if (
-    filename.includes('__tests__/') ||
-    filename.includes('/__tests__/') ||
-    filename.includes('/test/') ||
-    filename.includes('/tests/') ||
-    lowerFilename.endsWith('.test.ts') ||
-    lowerFilename.endsWith('.test.tsx') ||
-    lowerFilename.endsWith('.test.js') ||
-    lowerFilename.endsWith('.test.jsx') ||
-    lowerFilename.endsWith('.spec.ts') ||
-    lowerFilename.endsWith('.spec.tsx') ||
-    lowerFilename.endsWith('.spec.js') ||
-    lowerFilename.endsWith('.spec.jsx')
-  ) {
-    return true
+const COMMENT_MARKER = '<!-- codekeeper:advice:v2 -->'
+
+function formatFileList(files: ChangedFileEntry[]) {
+  const added = files.filter((f) => f.status === 'added')
+  const modified = files.filter((f) => f.status === 'modified')
+  const removed = files.filter((f) => f.status === 'removed')
+  const renamed = files.filter((f) => f.status === 'renamed')
+
+  let list = ''
+
+  if (added.length > 0) {
+    list += `\n### Added\n${added.map((f) => `- \`${f.path}\``).join('\n')}\n`
   }
-  
-  // Storybook / demo files
-  if (
-    lowerFilename.endsWith('.stories.tsx') ||
-    lowerFilename.endsWith('.stories.ts') ||
-    lowerFilename.endsWith('.stories.jsx') ||
-    lowerFilename.endsWith('.stories.js') ||
-    filename.includes('.story.')
-  ) {
-    return true
+
+  if (modified.length > 0) {
+    list += `\n### Modified\n${modified.map((f) => `- \`${f.path}\``).join('\n')}\n`
   }
-  
-  // Auto-generated files
-  if (
-    filename.includes('/generated/') ||
-    filename.includes('/.generated/') ||
-    filename.startsWith('generated/') ||
-    filename.includes('/node_modules/') ||
-    filename.includes('/dist/') ||
-    filename.includes('/build/') ||
-    filename.includes('/.next/')
-  ) {
-    return true
+
+  if (removed.length > 0) {
+    list += `\n### Removed\n${removed.map((f) => `- \`${f.path}\``).join('\n')}\n`
   }
-  
-  return false
+
+  if (renamed.length > 0) {
+    list += `\n### Renamed\n${renamed.map((f) => `- \`${f.path}\``).join('\n')}\n`
+  }
+
+  return list
 }
 
-/**
- * Classify a file as code, docs, or other based on path and extension
- * Ignores test files, storybook files, and generated files
- */
-function classifyFile(filename: string): 'code' | 'docs' | 'other' {
-  // Skip ignored files (tests, stories, generated)
-  if (shouldIgnoreFile(filename)) {
-    return 'other'
+function bulletList(items: string[], fallback: string) {
+  if (!items.length) {
+    return `- ${fallback}`
   }
-  
-  const lowerFilename = filename.toLowerCase()
-  
-  // Code file patterns
-  const codePatterns = [
-    /^src\//,
-    /^app\//,
-    /^lib\//,
-    /^server\//,
-    /^components\//,
-    /^pages\//,
-  ]
-  
-  const codeExtensions = [
-    '.ts', '.tsx', '.js', '.jsx',
-    '.go', '.py', '.java', '.cpp', '.c',
-    '.rs', '.rb', '.php', '.swift', '.kt',
-  ]
-  
-  // Docs file patterns
-  const docPatterns = [
-    /^docs\//,
-    /^documentation\//,
-  ]
-  
-  // Check if it's a code file
-  const isCodePath = codePatterns.some(pattern => pattern.test(filename))
-  const isCodeExtension = codeExtensions.some(ext => lowerFilename.endsWith(ext))
-  
-  if (isCodePath || isCodeExtension) {
-    return 'code'
-  }
-  
-  // Check if it's a docs file
-  const isDocPath = docPatterns.some(pattern => pattern.test(filename))
-  const isMarkdown = lowerFilename.endsWith('.md')
-  const isDocFile = lowerFilename === 'readme.md' || 
-                    lowerFilename === 'changelog.md' ||
-                    lowerFilename.startsWith('readme') ||
-                    lowerFilename.startsWith('changelog')
-  
-  if (isDocPath || (isMarkdown && isDocFile)) {
-    return 'docs'
-  }
-  
-  // Markdown files are generally docs
-  if (isMarkdown) {
-    return 'docs'
-  }
-  
-  return 'other'
+  return items.map((item) => `- ${item}`).join('\n')
+}
+
+function generateLLMWarningComment(analysis: GeminiPRAnalysis, files: ChangedFileEntry[]) {
+  const summary =
+    analysis.summary ||
+    'I spotted changes that usually need documentation updates, but no related docs were edited.'
+
+  const reasoning = analysis.reasoning ? `\n> ${analysis.reasoning.trim()}` : ''
+  const confidence = analysis.confidence ? `\n> Confidence: ${analysis.confidence}` : ''
+
+  const eventsSection = bulletList(
+    analysis.events,
+    'Meaningful code/infra changes that impact users.'
+  )
+
+  const obligationsSection = bulletList(
+    analysis.obligations,
+    'Highlight what changed and how to use it.'
+  )
+
+  const missingDocsSection = bulletList(
+    analysis.missingDocs,
+    'Update the most relevant docs for this change.'
+  )
+
+  return `${COMMENT_MARKER}
+
+## 👋 Codekeeper
+
+${summary}${reasoning}${confidence}
+
+### Detected events
+${eventsSection}
+
+### Documentation areas to cover
+${obligationsSection}
+
+### Still missing
+${missingDocsSection}
+
+### Files changed
+${formatFileList(files)}
+`
+}
+
+function generateLLMPositiveComment(analysis: GeminiPRAnalysis, files: ChangedFileEntry[]) {
+  const summary =
+    analysis.summary || 'Thanks for updating the docs alongside the code changes 👍'
+  const docFiles = analysis.docFilesTouched.length
+    ? analysis.docFilesTouched.map((doc) => `- \`${doc}\``).join('\n')
+    : '- Documentation files were updated in this PR.'
+
+  return `${COMMENT_MARKER}
+
+## 👋 Codekeeper
+
+${summary}
+
+### Docs touched
+${docFiles}
+
+### Files changed
+${formatFileList(files)}
+`
 }
 
 /**
@@ -263,38 +259,10 @@ function generateCommentBody(
     return null
   }
   
-  // Helper function to format file list
-  const formatFileList = (files: typeof advice.allFiles) => {
-    const added = files.filter(f => f.status === 'added')
-    const modified = files.filter(f => f.status === 'modified')
-    const removed = files.filter(f => f.status === 'removed')
-    const renamed = files.filter(f => f.status === 'renamed')
-    
-    let list = ''
-    
-    if (added.length > 0) {
-      list += `\n### Added\n${added.map(f => `- \`${f.path}\``).join('\n')}\n`
-    }
-    
-    if (modified.length > 0) {
-      list += `\n### Modified\n${modified.map(f => `- \`${f.path}\``).join('\n')}\n`
-    }
-    
-    if (removed.length > 0) {
-      list += `\n### Removed\n${removed.map(f => `- \`${f.path}\``).join('\n')}\n`
-    }
-    
-    if (renamed.length > 0) {
-      list += `\n### Renamed\n${renamed.map(f => `- \`${f.path}\``).join('\n')}\n`
-    }
-    
-    return list
-  }
-
   // Case 1: Code + Docs changed → positive comment (optional, can be shorter)
   if (advice.importantCodeChanged && advice.docsChanged) {
     // Short, friendly comment - or you can return null to skip commenting
-    return `<!-- codekeeper:advice:v1 -->
+    return `${COMMENT_MARKER}
 
 ## 👋 Codekeeper
 
@@ -308,7 +276,7 @@ ${formatFileList(advice.allFiles)}
   
   // Case 2: Code changed but no docs → suggest updating docs
   if (advice.importantCodeChanged && !advice.docsChanged) {
-    let body = `<!-- codekeeper:advice:v1 -->
+    let body = `${COMMENT_MARKER}
 
 ## 👋 Codekeeper
 
@@ -352,8 +320,9 @@ async function findExistingComment(
     if (!response.ok) return null
 
     const comments = (await response.json()) as GitHubComment[]
+    const markers = [COMMENT_MARKER, '<!-- codekeeper:advice:v1 -->']
     const codekeeperComment = comments.find(
-      (c) => c.body.includes('<!-- codekeeper:advice:v1 -->') || c.user.type === 'Bot'
+      (c) => markers.some((marker) => c.body.includes(marker)) || c.user.type === 'Bot'
     )
 
     return codekeeperComment?.id || null
@@ -482,14 +451,56 @@ export async function POST(
 
     const files = (await filesResponse.json()) as GitHubPRFile[]
 
-    // 3. Analyze changes using simple classification
-    // Include all files (added, modified, removed, renamed) for display
+    // 3. Analyze changes using simple classification (fallback + logging)
     const advice = analyzePRChanges(files)
+    const docFilesFromDiff = files
+      .filter((file) => classifyFile(file.filename) === 'docs')
+      .map((file) => file.filename)
 
-    // 4. Generate comment body (may return null for docs-only PRs)
-    const commentBody = generateCommentBody(repoFullName, prNumber, pr.title, advice)
-    
-    // If comment body is null, skip posting (docs-only PR)
+    // 4. Ask Gemini for event + doc obligation analysis
+    const filesForGemini: PRFileForGemini[] = files.map((file) => ({
+      path: file.filename,
+      status: file.status,
+      additions: file.additions,
+      deletions: file.deletions,
+      changes: file.changes,
+      patch: file.patch,
+    }))
+
+    let geminiAnalysis: GeminiPRAnalysis | null = null
+    try {
+      geminiAnalysis = await analyzePullRequestWithGemini({
+        prTitle: pr.title,
+        prNumber,
+        prBody: pr.body ?? '',
+        files: filesForGemini,
+        docFilesTouched: docFilesFromDiff,
+      })
+    } catch (geminiError) {
+      console.error('Gemini analysis failed:', geminiError)
+    }
+
+    // 5. Generate the final comment using Gemini when available
+    let commentBody: string | null = null
+    let skipReason = 'Docs-only PR, no comment posted'
+
+    if (geminiAnalysis) {
+      if (geminiAnalysis.shouldWarn) {
+        commentBody = generateLLMWarningComment(geminiAnalysis, advice.allFiles)
+      } else if (geminiAnalysis.docsTouched && geminiAnalysis.events.length > 0) {
+        commentBody = generateLLMPositiveComment(geminiAnalysis, advice.allFiles)
+      } else {
+        skipReason =
+          geminiAnalysis.reasoning || 'Gemini analysis determined docs already cover this change'
+      }
+    } else {
+      commentBody = generateCommentBody(repoFullName, prNumber, pr.title, advice)
+      if (!commentBody) {
+        skipReason = 'Docs-only PR, no comment posted'
+      }
+    }
+
+    // If comment body is null, skip posting
     if (!commentBody) {
       if (prRunId) {
         await supabase
@@ -497,17 +508,18 @@ export async function POST(
           .update({
             status: 'completed',
             completed_at: new Date().toISOString(),
-          logs: {
-            codeFiles: advice.codeFiles,
-            docFiles: advice.docFiles,
-            codeFilesCount: advice.codeFiles.length,
-            docFilesCount: advice.docFiles.length,
-            importantCodeChanged: advice.importantCodeChanged,
-            docsChanged: advice.docsChanged,
-            comment_posted: false,
-            skipped: true,
-            reason: 'Docs-only PR, no comment needed',
-          },
+            logs: {
+              codeFiles: advice.codeFiles,
+              docFiles: advice.docFiles,
+              codeFilesCount: advice.codeFiles.length,
+              docFilesCount: advice.docFiles.length,
+              importantCodeChanged: advice.importantCodeChanged,
+              docsChanged: advice.docsChanged,
+              comment_posted: false,
+              skipped: true,
+              reason: skipReason,
+              llmAnalysis: geminiAnalysis,
+            },
           })
           .eq('id', prRunId)
       }
@@ -515,8 +527,9 @@ export async function POST(
         success: true,
         run_id: prRunId,
         skipped: true,
-        reason: 'Docs-only PR, no comment posted',
+        reason: skipReason,
         advice,
+        llm_analysis: geminiAnalysis,
       })
     }
 
@@ -584,6 +597,8 @@ export async function POST(
             changedFilesCount: advice.allFiles.length,
             comment_posted: commentId !== null,
             fullCommentBody: commentBody, // Store the full comment body
+            llmAnalysis: geminiAnalysis,
+            llmUsed: geminiAnalysis !== null,
           },
         })
         .eq('id', prRunId)
@@ -594,6 +609,7 @@ export async function POST(
       run_id: prRunId,
       comment_id: commentId,
       advice,
+      llm_analysis: geminiAnalysis,
     })
   } catch (error) {
     console.error('Error processing PR advice:', error)
