@@ -1,59 +1,40 @@
 # Code Keeper
 
-A modern full-stack application for managing and organizing code repositories, snippets, and development resources.
+Code Keeper is a full-stack app that helps you store and explore code repos, snippets, and docs in one place.
 
-## 🚀 Overview
+## What You Get
 
-Code Keeper is a comprehensive platform designed to help developers manage, organize, and access their code repositories and development resources efficiently. Built with modern web technologies, it provides a seamless experience for code management and collaboration.
+- Clean web dashboard built with Next.js 16 and React 19
+- Lightweight Node.js backend
+- Docker support for easy spin-up
+- Shared docs site
+- TypeScript everywhere
 
-## ✨ Features
-
-- **Modern Web Interface** - Built with Next.js 16 and React 19
-- **RESTful API Backend** - Scalable Node.js backend service
-- **Docker Support** - Fully containerized for easy deployment
-- **Documentation Site** - Comprehensive documentation with Docker support
-- **TypeScript** - Type-safe development across the entire stack
-- **Dark Mode** - Built-in dark mode support
-
-## 📁 Project Structure
+## Folder Map
 
 ```
 code-keeper/
-├── web/          # Next.js frontend application
-├── backend/      # Backend API service
-├── docs/         # Documentation site
-└── docker-compose.yml  # Docker orchestration
+├── web/          # Next.js app
+├── backend/      # API service
+├── docs/         # Extra guides
+└── docker-compose.yml
 ```
 
-## 🛠️ Tech Stack
+## Tech Quick Look
 
-### Frontend
-- **Next.js 16** - React framework with App Router
-- **React 19** - UI library
-- **TypeScript** - Type safety
-- **Tailwind CSS 4** - Styling framework
-- **Geist Font** - Modern typography
+- Frontend: Next.js 16, React 19, Tailwind CSS 4
+- Backend: Node.js + TypeScript
+- Infra: Docker, Docker Compose, Nginx (docs)
 
-### Backend
-- **Node.js** - Runtime environment
-- **TypeScript** - Type-safe backend development
+## Getting Started
 
-### Infrastructure
-- **Docker** - Containerization
-- **Docker Compose** - Service orchestration
-- **Nginx** - Web server for documentation
+### Requirements
 
-## 🚀 Quick Start
+- Node.js 20 or newer
+- npm / yarn / pnpm
+- Docker + Docker Compose (optional)
 
-### Prerequisites
-
-- Node.js 20+ and npm/yarn/pnpm
-- Docker Engine 20.10+
-- Docker Compose 2.0+
-
-### Local Development
-
-#### Web Application
+### Run the Web App
 
 ```bash
 cd web
@@ -61,9 +42,9 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Visit `http://localhost:3000`.
 
-#### Backend Service
+### Run the Backend
 
 ```bash
 cd backend
@@ -71,127 +52,121 @@ npm install
 npm start
 ```
 
-The backend will run on `http://localhost:3001`.
+Backend listens on `http://localhost:3001`.
 
-### Docker Deployment
+## Docker Steps
 
-#### Start All Services
+### Start Everything
 
 ```bash
 docker-compose up --build
 ```
 
-This will start:
-- **Web** on `http://localhost:3000`
-- **Backend** on `http://localhost:3001`
-- **Docs** on `http://localhost:8080` (optional, use `--profile docs`)
+Services:
 
-#### Start Specific Services
+- Web → `http://localhost:3000`
+- Backend → `http://localhost:3001`
+- Docs → `http://localhost:8080` (add `--profile docs`)
+
+### Start Select Services
 
 ```bash
-# Start only web and backend
 docker-compose up web backend
-
-# Start with documentation
 docker-compose --profile docs up
 ```
 
-#### Stop Services
+### Stop All Services
 
 ```bash
 docker-compose down
 ```
 
-For more detailed Docker instructions, see [docs/docker.md](./docs/docker.md).
+More tips live in `docs/docker.md`.
 
-## 📚 Documentation
+## Docs Folder
 
-All documentation is available in the `docs/` directory:
+Helpful files inside `docs/`:
 
-- [Docker Setup Guide](./docs/docker.md) - Docker and Docker Compose setup
-- [Web Application Guide](./docs/web.md) - Next.js application documentation
-- [Documentation Index](./docs/README.md) - Complete documentation index
+- `docs/docker.md` → Docker and Compose guide
+- `docs/web.md` → Frontend notes
+- `docs/README.md` → Docs index
 
-## 🧪 Development
+## Useful Scripts (web/)
 
-### Available Scripts
-
-#### Web
 ```bash
-npm run dev      # Start development server
-npm run build    # Build for production
-npm run start    # Start production server
-npm run lint     # Run ESLint
+npm run dev         # Dev server
+npm run build       # Production build
+npm run start       # Start production build
+npm run lint        # ESLint
+npm run test:gemini # Check Gemini AI link
 ```
 
-### Code Style
+### Gemini Test Checklist
 
-This project follows strict coding standards:
-- TypeScript with strict mode enabled
-- ESLint for code quality
-- Functional programming patterns
-- Component-based architecture
+1. Set `GEMINI_API_KEY` in `web/.env` or `web/.env.local`.
+2. From `web/`, ensure deps are installed.
+3. Run `npm run test:gemini`.
 
-See [.cursor/rules](./.cursor/rules) for detailed coding guidelines.
+The script makes three calls (basic, review, context) and prints sample replies plus response times so you can confirm the AI connection.
 
-## 🔧 Configuration
+## Code Style (short list)
 
-### Environment Variables
+- TypeScript strict mode
+- ESLint enforced
+- Component-first structure
+- See `.cursor/rules` for the full playbook
 
-#### Web
+## Environment Setup
+
+### Web App
+
 Create `web/.env.local`:
+
 ```env
-# Supabase Configuration (Required)
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
-
-# Site Configuration (Optional)
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
-
-# API Configuration (Optional)
 NEXT_PUBLIC_API_URL=http://localhost:3001
 ```
 
-**Getting your Supabase credentials:**
-1. Go to [Supabase Dashboard](https://supabase.com/dashboard)
-2. Select your project (or create a new one)
-3. Go to **Settings** → **API**
-4. Copy the **Project URL** (this is your `NEXT_PUBLIC_SUPABASE_URL`)
-5. Copy the **anon/public** key (this is your `NEXT_PUBLIC_SUPABASE_ANON_KEY`)
+Get Supabase values from the dashboard under **Settings → API**.
 
-#### Backend
-Create `backend/.env`:
+### Backend
+
+`backend/.env`:
+
 ```env
 NODE_ENV=development
 PORT=3001
 ```
 
-#### Docker
-For Docker deployment, create a `.env` file in the project root:
+### Docker Root `.env`
+
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 NEXT_PUBLIC_SITE_URL=https://code-keeper.vercel.app
 ```
 
-Or export them in your shell before running docker-compose:
+Or export them before running Compose:
+
 ```bash
 export NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
 export NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 docker-compose up --build
 ```
 
-## 🐳 Docker Services
+## Ports at a Glance
 
-| Service | Port | Description |
-|--------|------|-------------|
-| Web | 3000 | Next.js frontend application |
-| Backend | 3001 | Node.js API service |
-| Docs | 8080 | Documentation site (optional) |
+| Service | Port | Notes |
+|---------|------|-------|
+| Web     | 3000 | Next.js app |
+| Backend | 3001 | API service |
+| Docs    | 8080 | Docs site (optional) |
 
-## 📦 Building for Production
+## Production Builds
 
-### Web
+### Web Only
 
 ```bash
 cd web
@@ -199,18 +174,18 @@ npm run build
 npm start
 ```
 
-### Docker
+### Docker Stack
 
 ```bash
 docker-compose build
 docker-compose up -d
 ```
 
-## 🤝 Contributing
+## Contributing
 
-1. Follow the coding standards defined in `.cursor/rules`
-2. Write clear commit messages
-3. Test your changes thoroughly
-4. Update documentation as needed
+1. Follow `.cursor/rules`.
+2. Write clear commit messages.
+3. Add tests where it makes sense.
+4. Update docs when behavior changes.
 
 ---
