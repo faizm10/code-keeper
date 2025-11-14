@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  go-backend:
+    build:
+      context: ./go
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+    volumes:
+      - ./go:/app
+    restart: unless-stopped
+    networks:
+      - backend-network
+
+  python-backend:
+    build:
+      context: ./python
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+    volumes:
+      - ./python:/app
+    restart: unless-stopped
+    networks:
+      - backend-network
+
+networks:
+  backend-network:
+    driver: bridge
+
