@@ -10,17 +10,61 @@ interface MarkdownProps {
   className?: string
 }
 
+// Helper function to extract text content from React children for heading IDs
+function getTextContent(children: any): string {
+  if (typeof children === 'string') return children
+  if (Array.isArray(children)) {
+    return children.map((child) => 
+      typeof child === 'string' ? child : 
+      typeof child === 'object' && child?.props?.children ? getTextContent(child.props.children) : 
+      ''
+    ).join('')
+  }
+  return ''
+}
+
+// Helper function to generate heading ID from text
+function generateHeadingId(text: string): string {
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+}
+
 export function Markdown({ content, className }: MarkdownProps) {
   return (
     <div className={cn('prose prose-sm dark:prose-invert max-w-none text-foreground', className)}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
-          // Customize heading styles
-          h1: ({ node, ...props }) => <h1 className="text-2xl font-bold mt-6 mb-4" {...props} />,
-          h2: ({ node, ...props }) => <h2 className="text-xl font-semibold mt-5 mb-3" {...props} />,
-          h3: ({ node, ...props }) => <h3 className="text-lg font-semibold mt-4 mb-2" {...props} />,
-          h4: ({ node, ...props }) => <h4 className="text-base font-semibold mt-3 mb-2" {...props} />,
+          // Customize heading styles - auto-generate IDs for scroll spy
+          h1: ({ node, children, ...props }: any) => {
+            const title = getTextContent(children)
+            const id = generateHeadingId(title)
+            return <h1 id={id} className="text-2xl font-bold mt-6 mb-4 scroll-mt-28" {...props}>{children}</h1>
+          },
+          h2: ({ node, children, ...props }: any) => {
+            const title = getTextContent(children)
+            const id = generateHeadingId(title)
+            return <h2 id={id} className="text-xl font-semibold mt-5 mb-3 scroll-mt-28" {...props}>{children}</h2>
+          },
+          h3: ({ node, children, ...props }: any) => {
+            const title = getTextContent(children)
+            const id = generateHeadingId(title)
+            return <h3 id={id} className="text-lg font-semibold mt-4 mb-2 scroll-mt-28" {...props}>{children}</h3>
+          },
+          h4: ({ node, children, ...props }: any) => {
+            const title = getTextContent(children)
+            const id = generateHeadingId(title)
+            return <h4 id={id} className="text-base font-semibold mt-3 mb-2" {...props}>{children}</h4>
+          },
+          h5: ({ node, children, ...props }: any) => {
+            const title = getTextContent(children)
+            const id = generateHeadingId(title)
+            return <h5 id={id} className="text-sm font-semibold mt-3 mb-2" {...props}>{children}</h5>
+          },
+          h6: ({ node, children, ...props }: any) => {
+            const title = getTextContent(children)
+            const id = generateHeadingId(title)
+            return <h6 id={id} className="text-xs font-semibold mt-2 mb-2" {...props}>{children}</h6>
+          },
           // Customize paragraph
           p: ({ node, ...props }) => <p className="mb-4 leading-relaxed" {...props} />,
           // Customize links

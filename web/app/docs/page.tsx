@@ -1,7 +1,7 @@
 import { Metadata } from "next";
-import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { Mail } from "lucide-react";
+import { getDocBySlug, extractHeadings } from "@/lib/docs";
+import { Markdown } from "@/components/ui/markdown";
 import ScrollSpyContainer from "./scroll-spy-container";
 
 export const metadata: Metadata = {
@@ -9,62 +9,30 @@ export const metadata: Metadata = {
   description: "Learn how to connect GitHub and use the Code Keeper dashboard.",
 };
 
-const sections = [
-  {
-    id: "welcome",
-    title: "Welcome",
-    summary: "An overview of Code Keeper’s goals and how the docs are organised.",
-    paragraphs: [
-      "Code Keeper is your autonomous maintenance teammate. It keeps documentation, architecture notes, and safe refactors up to date by opening reviewable pull requests in your repository.",
-      "This guide walks through three moments that matter most: connecting GitHub, exploring dashboards, and working with the automated pull requests that Code Keeper creates.",
-    ],
-  },
-  {
-    id: "connect-github",
-    title: "Connect GitHub",
-    summary: "Install the GitHub App, authenticate, and revisit connection status.",
-    paragraphs: [
-      "Install the Code Keeper GitHub App for the repositories you want maintained. The app requests repo-level permissions so it can read changes and open pull requests on your behalf—never direct pushes.",
-      "Sign in to the Code Keeper web app using the same GitHub account. After OAuth completes, you’ll land back at `/dashboard` with the active session stored securely.",
-      "If tokens expire or access gets revoked, the dashboard shows a reconnect banner. Re-authorise with a single click—no manual clean up required.",
-    ],
-  },
-  {
-    id: "dashboard-tour",
-    title: "Dashboard tour",
-    summary: "See what’s available once your account is linked.",
-    paragraphs: [
-      "Repository list: Each connected repo displays metadata pulled from GitHub—stars, forks, visibility, open issues, last push, and default branch.",
-      "Structure explorer: Browse the file tree exactly as Code Keeper sees it. Expand folders, inspect files, and click a file to preview syntax-highlighted content. External links jump straight to GitHub when needed.",
-      "Pull request panel: View the latest open, closed, and merged PRs. The “View details” link opens a dedicated page showing branch targets, labels, reviewers, commit history, and file changes.",
-    ],
-  },
-  {
-    id: "maintenance-flow",
-    title: "Maintenance workflow",
-    summary: "Understand how Code Keeper’s automation fits into daily work.",
-    paragraphs: [
-      "On every change, Code Keeper drafts documentation updates, safe refactor patches, and architecture notes, then opens a pull request. Humans stay in the loop—the system never commits directly to your default branch.",
-      "Review the PR like you would a teammate’s submission. Everything is attributable and traceable. Merge when you are satisfied or request adjustments in GitHub comments.",
-      "Need to pause automation? Revoke the GitHub App for specific repositories or reach out for support. Historical PRs remain accessible for audits and retrospectives.",
-    ],
-  },
-  {
-    id: "support",
-    title: "Support & feedback",
-    summary: "Share feedback or ask questions directly with the builder.",
-    paragraphs: [
-      "I’m Faiz Mustansar, and I respond personally to support emails. Whether you found a bug, have an idea, or just want to talk process, I’d love to hear from you.",
-      "Email: ",
-    ],
-  },
-];
-
 export default function DocsPage() {
+  const doc = getDocBySlug('index')
+  
+  if (!doc) {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <main className="flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
+            <p className="text-lg text-muted-foreground">Documentation not found.</p>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
+  const headings = extractHeadings(doc.content)
+
   return (
     <div className="flex min-h-screen bg-background">
       <aside className="sticky top-20 hidden h-[calc(100vh-5rem)] w-72 shrink-0 overflow-hidden border-r border-border bg-muted/20 px-4 py-8 text-sm text-muted-foreground md:block">
-        <ScrollSpyContainer sections={sections.map(({ id, title }) => ({ id, title }))} className="space-y-6" />
+        <ScrollSpyContainer 
+          sections={headings.map(({ id, title }) => ({ id, title }))} 
+          className="space-y-6" 
+        />
       </aside>
 
       <main className="flex-1 overflow-y-auto">
@@ -73,37 +41,23 @@ export default function DocsPage() {
             <Badge variant="outline" className="gap-2 px-3 py-1 text-sm">
               Documentation
             </Badge>
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">Code Keeper documentation</h1>
-            <p className="text-lg text-muted-foreground">
-              Learn how to connect GitHub, explore the dashboard, and collaborate with automated pull requests generated by Code Keeper.
-            </p>
+            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">{doc.metadata.title}</h1>
+            {doc.metadata.description && (
+              <p className="text-lg text-muted-foreground">
+                {doc.metadata.description}
+              </p>
+            )}
           </div>
         </header>
 
         <article className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
-          <div className="space-y-16">
-            {sections.map((section) => (
-              <section key={section.id} id={section.id} className="scroll-mt-28 space-y-4">
-                <div className="space-y-2">
-                  <h2 className="text-2xl font-semibold text-foreground">{section.title}</h2>
-                  {section.summary && <p className="text-sm text-muted-foreground">{section.summary}</p>}
-                </div>
-                <div className="space-y-4 text-sm leading-relaxed text-muted-foreground">
-                  {section.paragraphs.map((paragraph, index) =>
-                    section.id === "support" && index === section.paragraphs.length - 1 ? (
-                      <p key={index}>
-                        Email:{" "}
-                        <Link href="mailto:faizmustansar10@gmail.com" className="text-primary underline-offset-2 hover:underline">
-                          faizmustansar10@gmail.com
-                        </Link>
-                      </p>
-                    ) : (
-                      <p key={index}>{paragraph}</p>
-                    ),
-                  )}
-                </div>
-              </section>
-            ))}
+          <div className="prose prose-sm dark:prose-invert max-w-none">
+            <Markdown 
+              content={doc.content}
+              className="[&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:mt-12 [&_h2]:mb-4 [&_h2]:text-foreground
+                        [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:mt-8 [&_h3]:mb-3 [&_h3]:text-foreground
+                        [&_p]:text-sm [&_p]:leading-relaxed [&_p]:text-muted-foreground [&_p]:mb-4"
+            />
           </div>
         </article>
       </main>
