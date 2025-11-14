@@ -20,6 +20,8 @@ export type GeminiPRAnalysis = {
   shouldWarn: boolean
   reasoning: string
   summary: string
+  comment: string
+  tone?: string
   confidence?: 'high' | 'medium' | 'low'
 }
 
@@ -142,6 +144,7 @@ For each pull request you must:
 3. Map each event to the documentation areas that usually need updates (API docs, DB/schema docs, setup/env docs, changelog, infra docs, runbooks, etc.).
 4. Decide if documentation already covers the change by looking at the doc files that changed.
 5. Decide if Code Keeper should leave a reminder (meaningful events happened but matching docs were not updated). If docs are already updated, respond positively instead of warning.
+6. Craft a concise, friendly Markdown comment tailored to this PR and repo. Reference specific events and files, call out missing docs, or praise the author. Keep it actionable and avoid boilerplate.
 
 Return JSON with this shape:
 {
@@ -154,6 +157,8 @@ Return JSON with this shape:
   "shouldWarn": boolean,       // true if Code Keeper should flag missing docs
   "summary": string,           // 1-2 sentence summary for the PR comment
   "reasoning": string,         // short explanation of your decision
+  "tone": string,              // short description of the tone you used
+  "comment": string,           // full Markdown comment, no code fences, do NOT include the comment marker
   "confidence": "high" | "medium" | "low"
 }
 
@@ -193,6 +198,8 @@ ${filesContext}
     shouldWarn: parsed.shouldWarn ?? false,
     reasoning: parsed.reasoning ?? '',
     summary: parsed.summary ?? '',
+    comment: parsed.comment ?? '',
+    tone: parsed.tone,
     confidence: parsed.confidence,
   }
 }

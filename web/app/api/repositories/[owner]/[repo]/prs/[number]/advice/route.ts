@@ -94,77 +94,6 @@ function formatFileList(files: ChangedFileEntry[]) {
   return list
 }
 
-function bulletList(items: string[], fallback: string) {
-  if (!items.length) {
-    return `- ${fallback}`
-  }
-  return items.map((item) => `- ${item}`).join('\n')
-}
-
-function generateLLMWarningComment(analysis: GeminiPRAnalysis, files: ChangedFileEntry[]) {
-  const summary =
-    analysis.summary ||
-    'I spotted changes that usually need documentation updates, but no related docs were edited.'
-
-  const reasoning = analysis.reasoning ? `\n> ${analysis.reasoning.trim()}` : ''
-  const confidence = analysis.confidence ? `\n> Confidence: ${analysis.confidence}` : ''
-
-  const eventsSection = bulletList(
-    analysis.events,
-    'Meaningful code/infra changes that impact users.'
-  )
-
-  const obligationsSection = bulletList(
-    analysis.obligations,
-    'Highlight what changed and how to use it.'
-  )
-
-  const missingDocsSection = bulletList(
-    analysis.missingDocs,
-    'Update the most relevant docs for this change.'
-  )
-
-  return `${COMMENT_MARKER}
-
-## 👋 Codekeeper
-
-${summary}${reasoning}${confidence}
-
-### Detected events
-${eventsSection}
-
-### Documentation areas to cover
-${obligationsSection}
-
-### Still missing
-${missingDocsSection}
-
-### Files changed
-${formatFileList(files)}
-`
-}
-
-function generateLLMPositiveComment(analysis: GeminiPRAnalysis, files: ChangedFileEntry[]) {
-  const summary =
-    analysis.summary || 'Thanks for updating the docs alongside the code changes 👍'
-  const docFiles = analysis.docFilesTouched.length
-    ? analysis.docFilesTouched.map((doc) => `- \`${doc}\``).join('\n')
-    : '- Documentation files were updated in this PR.'
-
-  return `${COMMENT_MARKER}
-
-## 👋 Codekeeper
-
-${summary}
-
-### Docs touched
-${docFiles}
-
-### Files changed
-${formatFileList(files)}
-`
-}
-
 /**
  * Step 1: Classify files as code vs docs
  * Step 2: Determine if important code changed
@@ -485,10 +414,12 @@ export async function POST(
     let skipReason = 'Docs-only PR, no comment posted'
 
     if (geminiAnalysis) {
-      if (geminiAnalysis.shouldWarn) {
-        commentBody = generateLLMWarningComment(geminiAnalysis, advice.allFiles)
-      } else if (geminiAnalysis.docsTouched && geminiAnalysis.events.length > 0) {
-        commentBody = generateLLMPositiveComment(geminiAnalysis, advice.allFiles)
+      const llmComment = geminiAnalysis.comment?.trim()
+      if (llmComment) {
+        commentBody = `${COMMENT_MARKER}\n\n${llmComment}`
+      } else if (geminiAnalysis.shouldWarn || geminiAnalysis.events.length > 0) {
+        // Gemini spotted events but failed to return a comment; fall back to heuristics
+        commentBody = generateCommentBody(repoFullName, prNumber, pr.title, advice)
       } else {
         skipReason =
           geminiAnalysis.reasoning || 'Gemini analysis determined docs already cover this change'
