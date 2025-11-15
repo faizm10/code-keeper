@@ -21,6 +21,11 @@ export type GeminiPRAnalysis = {
   reasoning: string
   summary: string
   comment: string
+  fileSummaries: Array<{
+    path: string
+    status?: 'added' | 'modified' | 'removed' | 'renamed'
+    summary: string
+  }>
   tone?: string
   confidence?: 'high' | 'medium' | 'low'
 }
@@ -82,8 +87,27 @@ function buildFileContext(
   return entries.join('\n\n')
 }
 
+function coalesceResponseText(response: any) {
+  const direct = typeof response.text === 'function' ? response.text() : ''
+  if (direct && direct.trim()) {
+    return direct
+  }
+
+  const parts = response?.candidates?.flatMap((candidate: any) =>
+    candidate?.content?.parts?.map((part: any) => part?.text).filter(Boolean) ?? []
+  )
+
+  const assembled = Array.isArray(parts) ? parts.join('\n') : ''
+  if (assembled && assembled.trim()) {
+    return assembled
+  }
+
+  const raw = response?.candidates ? JSON.stringify(response.candidates) : ''
+  return raw
+}
+
 function extractJsonResponse(raw: string) {
-  const trimmed = raw.trim()
+  const trimmed = raw?.trim?.() ?? ''
 
   if (!trimmed) {
     throw new Error('Empty response from Gemini')
@@ -145,6 +169,7 @@ For each pull request you must:
 4. Decide if documentation already covers the change by looking at the doc files that changed.
 5. Decide if Code Keeper should leave a reminder (meaningful events happened but matching docs were not updated). If docs are already updated, respond positively instead of warning.
 6. Craft a concise, friendly Markdown comment tailored to this PR and repo. Reference specific events and files, call out missing docs, or praise the author. Keep it actionable and avoid boilerplate.
+7. **MANDATORY:** For every file listed below (added/modified/renamed), write a single-sentence summary of what changed. Populate \`fileSummaries\` with **exactly the same number of entries as there are files**. Include those sentences verbatim in the final comment (for example, under a "File snapshots" heading). If a patch is truncated/binary or lacks context, clearly state that.
 
 Return JSON with this shape:
 {
@@ -159,6 +184,9 @@ Return JSON with this shape:
   "reasoning": string,         // short explanation of your decision
   "tone": string,              // short description of the tone you used
   "comment": string,           // full Markdown comment, no code fences, do NOT include the comment marker
+  "fileSummaries": [
+    { "path": string, "status": "added"|"modified"|"removed"|"renamed", "summary": string }
+  ],
   "confidence": "high" | "medium" | "low"
 }
 
@@ -168,6 +196,9 @@ PR Title: ${prTitle}
 PR Number: ${prNumber}
 Doc files touched:
 ${docList}
+
+All changed files (must summarize each one):
+${files.map((file) => `- ${file.status.toUpperCase()}: ${file.path}`).join('\n')}
 
 Files changed:
 ${filesContext}
@@ -185,7 +216,7 @@ ${filesContext}
   })
 
   const response = await result.response
-  const text = response.text()
+  const text = coalesceResponseText(response)
   const parsed = extractJsonResponse(text) as Partial<GeminiPRAnalysis>
 
   return {
@@ -199,6 +230,7 @@ ${filesContext}
     reasoning: parsed.reasoning ?? '',
     summary: parsed.summary ?? '',
     comment: parsed.comment ?? '',
+    fileSummaries: parsed.fileSummaries ?? [],
     tone: parsed.tone,
     confidence: parsed.confidence,
   }

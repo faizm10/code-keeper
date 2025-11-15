@@ -6,7 +6,7 @@ import {
   GeminiPRAnalysis,
   PRFileForGemini,
 } from '@/lib/gemini/pr-advice'
-import { classifyFile } from '@/lib/pr/file-classification'
+import { classifyFile, detectRepoZone } from '@/lib/pr/file-classification'
 
 export const dynamic = 'force-dynamic'
 
@@ -92,6 +92,68 @@ function formatFileList(files: ChangedFileEntry[]) {
   }
 
   return list
+}
+
+type GeminiFileSummary = GeminiPRAnalysis['fileSummaries'][number]
+
+function extractKeyAdditions(patch?: string, limit = 2): string {
+  if (!patch) return ''
+  const additions = patch
+    .split('\n')
+    .filter(
+      (line) =>
+        line.startsWith('+') &&
+        !line.startsWith('+++') &&
+        line.trim() !== '+' &&
+        !line.startsWith('+#') &&
+        !line.startsWith('+//')
+    )
+    .map((line) => line.replace(/^\+/, '').trim())
+    .filter(Boolean)
+    .slice(0, limit)
+
+  if (!additions.length) {
+    return ''
+  }
+
+  return additions.join(' | ')
+}
+
+function buildFallbackFileSummaries(files: GitHubPRFile[]): GeminiFileSummary[] {
+  return files.map((file) => {
+    const zone = detectRepoZone(file.filename)
+    const keyAdditions = extractKeyAdditions(file.patch, 3)
+
+    const summaryParts = [
+      `${file.status.toUpperCase()} \`${file.filename}\``,
+      `zone: ${zone}`,
+      `diff: +${file.additions}/-${file.deletions}`,
+    ]
+
+    if (keyAdditions) {
+      summaryParts.push(`focus: ${keyAdditions}`)
+    } else if (file.patch && file.patch.includes('Binary file')) {
+      summaryParts.push('binary diff (details omitted)')
+    }
+
+    return {
+      path: file.filename,
+      status: file.status,
+      summary: summaryParts.join(' • '),
+    }
+  })
+}
+
+function renderFileSummariesSection(summaries: GeminiFileSummary[]) {
+  if (!summaries.length) {
+    return ''
+  }
+
+  const lines = summaries.map(
+    (summary) => `- ${summary.summary || `${summary.status?.toUpperCase()} \`${summary.path}\``}`
+  )
+
+  return `\n\n### File snapshots\n${lines.join('\n')}`
 }
 
 /**
@@ -234,33 +296,6 @@ If this affects users or the public API, consider updating:
   return null
 }
 
-async function findExistingComment(
-  owner: string,
-  repo: string,
-  prNumber: number,
-  headers: HeadersInit
-): Promise<number | null> {
-  try {
-    const response = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/issues/${prNumber}/comments`,
-      { headers, cache: 'no-store' }
-    )
-
-    if (!response.ok) return null
-
-    const comments = (await response.json()) as GitHubComment[]
-    const markers = [COMMENT_MARKER, '<!-- codekeeper:advice:v1 -->']
-    const codekeeperComment = comments.find(
-      (c) => markers.some((marker) => c.body.includes(marker)) || c.user.type === 'Bot'
-    )
-
-    return codekeeperComment?.id || null
-  } catch (error) {
-    console.error('Error finding existing comment:', error)
-    return null
-  }
-}
-
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ owner: string; repo: string; number: string }> }
@@ -379,6 +414,8 @@ export async function POST(
     }
 
     const files = (await filesResponse.json()) as GitHubPRFile[]
+    const expectedFileSummaryCount = files.length
+    let effectiveFileSummaries: GeminiFileSummary[] = buildFallbackFileSummaries(files)
 
     // 3. Analyze changes using simple classification (fallback + logging)
     const advice = analyzePRChanges(files)
@@ -405,8 +442,43 @@ export async function POST(
         files: filesForGemini,
         docFilesTouched: docFilesFromDiff,
       })
+      if (geminiAnalysis) {
+        const llmSummaries = geminiAnalysis.fileSummaries ?? []
+        if (
+          llmSummaries.length === expectedFileSummaryCount &&
+          llmSummaries.every((summary) => summary?.path)
+        ) {
+          effectiveFileSummaries = llmSummaries
+        } else {
+          console.warn(
+            'Gemini file summaries missing or mismatched. Falling back to heuristic summaries.',
+            {
+              repo: repoFullName,
+              pr_number: prNumber,
+              expected: expectedFileSummaryCount,
+              received: llmSummaries.length,
+            }
+          )
+        }
+
+        console.log('Gemini analysis result', {
+          repo: repoFullName,
+          pr_number: prNumber,
+          zones: geminiAnalysis.zones,
+          events: geminiAnalysis.events,
+          obligations: geminiAnalysis.obligations,
+          docsTouched: geminiAnalysis.docsTouched,
+          missingDocs: geminiAnalysis.missingDocs,
+          shouldWarn: geminiAnalysis.shouldWarn,
+          confidence: geminiAnalysis.confidence,
+          fileSummariesCount: geminiAnalysis.fileSummaries?.length ?? 0,
+        })
+        console.log('Gemini file summaries', effectiveFileSummaries)
+        console.log('Gemini comment preview', geminiAnalysis.comment)
+      }
     } catch (geminiError) {
       console.error('Gemini analysis failed:', geminiError)
+      effectiveFileSummaries = buildFallbackFileSummaries(files)
     }
 
     // 5. Generate the final comment using Gemini when available
@@ -416,22 +488,45 @@ export async function POST(
     if (geminiAnalysis) {
       const llmComment = geminiAnalysis.comment?.trim()
       if (llmComment) {
-        commentBody = `${COMMENT_MARKER}\n\n${llmComment}`
+        commentBody = `${COMMENT_MARKER}\n\n${llmComment}${renderFileSummariesSection(
+          effectiveFileSummaries
+        )}`
       } else if (geminiAnalysis.shouldWarn || geminiAnalysis.events.length > 0) {
         // Gemini spotted events but failed to return a comment; fall back to heuristics
-        commentBody = generateCommentBody(repoFullName, prNumber, pr.title, advice)
+        console.warn('Gemini returned events but no comment. Falling back to heuristic template.', {
+          repo: repoFullName,
+          pr_number: prNumber,
+        })
+        const fallback = generateCommentBody(repoFullName, prNumber, pr.title, advice)
+        commentBody = fallback
+          ? `${fallback}${renderFileSummariesSection(effectiveFileSummaries)}`
+          : null
       } else {
         skipReason =
           geminiAnalysis.reasoning || 'Gemini analysis determined docs already cover this change'
       }
     } else {
-      commentBody = generateCommentBody(repoFullName, prNumber, pr.title, advice)
+      const fallbackComment = generateCommentBody(repoFullName, prNumber, pr.title, advice)
+      commentBody = fallbackComment
+        ? `${fallbackComment}${renderFileSummariesSection(effectiveFileSummaries)}`
+        : null
       if (!commentBody) {
         skipReason = 'Docs-only PR, no comment posted'
       }
     }
 
-    // If comment body is null, skip posting
+    if (!commentBody && effectiveFileSummaries.length) {
+      commentBody = `${COMMENT_MARKER}
+
+## 👋 Codekeeper
+
+Here’s a quick snapshot of this PR.
+${renderFileSummariesSection(effectiveFileSummaries)}
+`
+      skipReason = ''
+    }
+
+    // If comment body is still null (e.g., docs-only PR with no files), skip posting
     if (!commentBody) {
       if (prRunId) {
         await supabase
@@ -450,6 +545,7 @@ export async function POST(
               skipped: true,
               reason: skipReason,
               llmAnalysis: geminiAnalysis,
+              fileSummaries: effectiveFileSummaries,
             },
           })
           .eq('id', prRunId)
@@ -461,52 +557,38 @@ export async function POST(
         reason: skipReason,
         advice,
         llm_analysis: geminiAnalysis,
+        file_summaries: effectiveFileSummaries,
       })
     }
 
-    // 6. Find existing Codekeeper comment
-    const existingCommentId = await findExistingComment(owner, repo, prNumber, headers)
-
-    // 7. Post or update comment
+    // 6. Always create a fresh comment to avoid overwriting previous context
     let commentId: number | null = null
-
-    if (existingCommentId) {
-      // Update existing comment
-      const updateResponse = await fetch(
-        `https://api.github.com/repos/${owner}/${repo}/issues/comments/${existingCommentId}`,
-        {
-          method: 'PATCH',
-          headers: {
-            ...headers,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ body: commentBody }),
-          cache: 'no-store',
-        }
-      )
-
-      if (updateResponse.ok) {
-        commentId = existingCommentId
+    const createResponse = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/issues/${prNumber}/comments`,
+      {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ body: commentBody }),
+        cache: 'no-store',
       }
+    )
+
+    if (createResponse.ok) {
+      const comment = await createResponse.json()
+      commentId = comment.id
+      console.log('Posted new Codekeeper comment', { repo: repoFullName, pr_number: prNumber, commentId })
     } else {
-      // Create new comment
-      const createResponse = await fetch(
-        `https://api.github.com/repos/${owner}/${repo}/issues/${prNumber}/comments`,
-        {
-          method: 'POST',
-          headers: {
-            ...headers,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ body: commentBody }),
-          cache: 'no-store',
-        }
-      )
-
-      if (createResponse.ok) {
-        const comment = await createResponse.json()
-        commentId = comment.id
-      }
+      const errorBody = await createResponse.text()
+      console.error('Failed to post Codekeeper comment', {
+        repo: repoFullName,
+        pr_number: prNumber,
+        status: createResponse.status,
+        statusText: createResponse.statusText,
+        body: errorBody?.slice(0, 500),
+      })
     }
 
     // 8. Update PR run status
@@ -530,6 +612,7 @@ export async function POST(
             fullCommentBody: commentBody, // Store the full comment body
             llmAnalysis: geminiAnalysis,
             llmUsed: geminiAnalysis !== null,
+            fileSummaries: effectiveFileSummaries,
           },
         })
         .eq('id', prRunId)
@@ -541,6 +624,7 @@ export async function POST(
       comment_id: commentId,
       advice,
       llm_analysis: geminiAnalysis,
+      file_summaries: effectiveFileSummaries,
     })
   } catch (error) {
     console.error('Error processing PR advice:', error)
