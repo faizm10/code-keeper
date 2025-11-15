@@ -6,7 +6,7 @@ import {
   GeminiPRAnalysis,
   PRFileForGemini,
 } from '@/lib/gemini/pr-advice'
-import { classifyFile, detectRepoZone } from '@/lib/pr/file-classification'
+import { classifyFile } from '@/lib/pr/file-classification'
 
 export const dynamic = 'force-dynamic'
 
@@ -96,52 +96,208 @@ function formatFileList(files: ChangedFileEntry[]) {
 
 type GeminiFileSummary = GeminiPRAnalysis['fileSummaries'][number]
 
-function extractKeyAdditions(patch?: string, limit = 2): string {
-  if (!patch) return ''
-  const additions = patch
-    .split('\n')
-    .filter(
-      (line) =>
-        line.startsWith('+') &&
-        !line.startsWith('+++') &&
-        line.trim() !== '+' &&
-        !line.startsWith('+#') &&
-        !line.startsWith('+//')
-    )
-    .map((line) => line.replace(/^\+/, '').trim())
-    .filter(Boolean)
-    .slice(0, limit)
-
-  if (!additions.length) {
-    return ''
-  }
-
-  return additions.join(' | ')
+type FileChangeAnalysis = {
+  description: string
+  additions: string[]
+  deletions: string[]
 }
 
-function buildFallbackFileSummaries(files: GitHubPRFile[]): GeminiFileSummary[] {
-  return files.map((file) => {
-    const zone = detectRepoZone(file.filename)
-    const keyAdditions = extractKeyAdditions(file.patch, 3)
+function isPackageLockFile(path: string) {
+  return /package-lock\.json$/i.test(path)
+}
 
-    const summaryParts = [
-      `${file.status.toUpperCase()} \`${file.filename}\``,
-      `zone: ${zone}`,
-      `diff: +${file.additions}/-${file.deletions}`,
-    ]
+function summarizePackageLockChanges(file: GitHubPRFile): string {
+  const addedVersions = (file.patch?.match(/^\+\s+"version":\s*"[^"]+"/gm) ?? []).length
+  const removedVersions = (file.patch?.match(/^-\s+"version":\s*"[^"]+"/gm) ?? []).length
+  const bumped = Math.min(addedVersions, removedVersions)
+  const addedOnly = Math.max(0, addedVersions - bumped)
+  const removedOnly = Math.max(0, removedVersions - bumped)
 
-    if (keyAdditions) {
-      summaryParts.push(`focus: ${keyAdditions}`)
-    } else if (file.patch && file.patch.includes('Binary file')) {
-      summaryParts.push('binary diff (details omitted)')
+  const statusLabel =
+    file.status === 'added'
+      ? 'New'
+      : file.status === 'modified'
+      ? 'Updated'
+      : file.status === 'removed'
+      ? 'Deleted'
+      : 'Renamed'
+
+  return `**${statusLabel}**: \`${file.filename}\` — package changes (added ${addedOnly}, updated ${bumped}, removed ${removedOnly})`
+}
+
+function extractMeaningfulChanges(patch?: string): FileChangeAnalysis {
+  if (!patch) {
+    return { description: '', additions: [], deletions: [] }
+  }
+
+  const additions: string[] = []
+  const deletions: string[] = []
+
+  const lines = patch.split('\n')
+  for (const line of lines) {
+    if (line.startsWith('+++') || line.startsWith('---') || line.startsWith('@@')) {
+      continue
     }
 
+    if (line.startsWith('+') && line.trim() !== '+') {
+      const content = line.slice(1).trim()
+      if (
+        content &&
+        !content.startsWith('//') &&
+        !content.startsWith('#') &&
+        !content.startsWith('*')
+      ) {
+        additions.push(content)
+      }
+    } else if (line.startsWith('-') && line.trim() !== '-') {
+      const content = line.slice(1).trim()
+      if (
+        content &&
+        !content.startsWith('//') &&
+        !content.startsWith('#') &&
+        !content.startsWith('*')
+      ) {
+        deletions.push(content)
+      }
+    }
+  }
+
+  const description = generateChangeDescription(additions, deletions, patch)
+  return { description, additions, deletions }
+}
+
+function generateChangeDescription(
+  additions: string[],
+  deletions: string[],
+  fullPatch: string
+): string {
+  const patterns = {
+    newFunction: /^\s*(function|const|let|var)\s+(\w+)\s*[=(]/,
+    newClass: /^\s*class\s+(\w+)/,
+    newImport: /^\s*import\s+.*from/,
+    newExport: /^\s*export\s+(function|const|class|default)/,
+    newType: /^\s*(type|interface)\s+(\w+)/,
+    configChange: /^\s*["']?\w+["']?\s*:/,
+    testCase: /^\s*(it|test|describe)\s*\(/,
+  }
+
+  for (const addition of additions.slice(0, 3)) {
+    if (patterns.newFunction.test(addition)) {
+      const match = addition.match(patterns.newFunction)
+      return `Added ${match?.[1] === 'function' ? 'function' : 'method'} \`${match?.[2]}\``
+    }
+    if (patterns.newClass.test(addition)) {
+      const match = addition.match(patterns.newClass)
+      return `Added class \`${match?.[1]}\``
+    }
+    if (patterns.newImport.test(addition)) {
+    const match = addition.match(/import\s+(.*)\s+from\s+['"](.*)['"]/)
+    if (match) {
+      return `Imported ${match[1]} from ${match[2]}`
+    }
+    return 'Added import'
+    }
+    if (patterns.newExport.test(addition)) {
+      return 'Added exports'
+    }
+    if (patterns.newType.test(addition)) {
+      const match = addition.match(patterns.newType)
+      return `Added ${match?.[1]} \`${match?.[2]}\``
+    }
+    if (patterns.testCase.test(addition)) {
+      return 'Added test cases'
+    }
+    if (patterns.configChange.test(addition)) {
+      return 'Updated configuration'
+    }
+  }
+
+  if (additions.length && deletions.length) {
+    return 'Modified implementation'
+  }
+  if (additions.length) {
+    const snippet = additions.slice(0, 2).join(' | ')
+    return `Added code: ${snippet}`
+  }
+  if (deletions.length) {
+    return 'Removed code'
+  }
+  if (fullPatch.includes('Binary file')) {
+    return 'Updated binary content'
+  }
+  return ''
+}
+
+function getChangeMagnitude(additions: number, deletions: number): string {
+  const total = additions + deletions
+  if (total === 0) return ''
+  if (total < 10) return 'minor change'
+  if (total < 50) return 'moderate change'
+  if (total < 200) return 'significant change'
+  return 'major refactor'
+}
+
+function buildImprovedFileSummary(file: GitHubPRFile): GeminiFileSummary {
+  if (isPackageLockFile(file.filename)) {
     return {
       path: file.filename,
       status: file.status,
-      summary: summaryParts.join(' • '),
+      summary: summarizePackageLockChanges(file),
     }
-  })
+  }
+
+  const analysis = extractMeaningfulChanges(file.patch)
+  const parts: string[] = []
+
+  // Status + file
+  const statusLabel =
+    file.status === 'added'
+      ? 'New'
+      : file.status === 'modified'
+      ? 'Updated'
+      : file.status === 'removed'
+      ? 'Deleted'
+      : 'Renamed'
+  parts.push(`**${statusLabel}**: \`${file.filename}\``)
+
+  // Magnitude if meaningful
+  if (file.status !== 'removed') {
+    const magnitude = getChangeMagnitude(file.additions, file.deletions)
+    if (magnitude) {
+      parts.push(`(${magnitude})`)
+    }
+  }
+
+  // Added code → describe what it does in simple words
+  if (analysis.description && analysis.description.startsWith('Added code:')) {
+    parts.push(
+      `— ${
+        file.additions + file.deletions > 50
+          ? 'Introduces new logic. Highlights: '
+          : ''
+      }${analysis.description.replace('Added code: ', '')}`
+    )
+  } else if (analysis.description) {
+    parts.push(`— ${analysis.description}`)
+  } else if (analysis.additions.length) {
+    const snippet =
+      analysis.additions.length > 1
+        ? analysis.additions.slice(0, 2).join(' | ')
+        : analysis.additions[0]
+    parts.push(`— ${snippet}`)
+  } else if (file.patch && file.patch.includes('Binary file')) {
+    parts.push('— binary content updated')
+  }
+
+  return {
+    path: file.filename,
+    status: file.status,
+    summary: parts.join(' '),
+  }
+}
+
+function buildFallbackFileSummaries(files: GitHubPRFile[]): GeminiFileSummary[] {
+  return files.map((file) => buildImprovedFileSummary(file))
 }
 
 function renderFileSummariesSection(summaries: GeminiFileSummary[]) {
@@ -249,7 +405,7 @@ function generateCommentBody(
     // Return null to skip commenting for docs-only PRs
     return null
   }
-  
+
   // Case 1: Code + Docs changed → positive comment (optional, can be shorter)
   if (advice.importantCodeChanged && advice.docsChanged) {
     // Short, friendly comment - or you can return null to skip commenting
@@ -295,6 +451,9 @@ If this affects users or the public API, consider updating:
   // Fallback: shouldn't reach here, but return null
   return null
 }
+
+
+
 
 export async function POST(
   request: Request,
@@ -534,19 +693,19 @@ ${renderFileSummariesSection(effectiveFileSummaries)}
           .update({
             status: 'completed',
             completed_at: new Date().toISOString(),
-            logs: {
-              codeFiles: advice.codeFiles,
-              docFiles: advice.docFiles,
-              codeFilesCount: advice.codeFiles.length,
-              docFilesCount: advice.docFiles.length,
-              importantCodeChanged: advice.importantCodeChanged,
-              docsChanged: advice.docsChanged,
-              comment_posted: false,
-              skipped: true,
+          logs: {
+            codeFiles: advice.codeFiles,
+            docFiles: advice.docFiles,
+            codeFilesCount: advice.codeFiles.length,
+            docFilesCount: advice.docFiles.length,
+            importantCodeChanged: advice.importantCodeChanged,
+            docsChanged: advice.docsChanged,
+            comment_posted: false,
+            skipped: true,
               reason: skipReason,
               llmAnalysis: geminiAnalysis,
               fileSummaries: effectiveFileSummaries,
-            },
+          },
           })
           .eq('id', prRunId)
       }
@@ -563,22 +722,22 @@ ${renderFileSummariesSection(effectiveFileSummaries)}
 
     // 6. Always create a fresh comment to avoid overwriting previous context
     let commentId: number | null = null
-    const createResponse = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/issues/${prNumber}/comments`,
-      {
-        method: 'POST',
-        headers: {
-          ...headers,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ body: commentBody }),
-        cache: 'no-store',
-      }
-    )
+      const createResponse = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/issues/${prNumber}/comments`,
+        {
+          method: 'POST',
+          headers: {
+            ...headers,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ body: commentBody }),
+          cache: 'no-store',
+        }
+      )
 
-    if (createResponse.ok) {
-      const comment = await createResponse.json()
-      commentId = comment.id
+      if (createResponse.ok) {
+        const comment = await createResponse.json()
+        commentId = comment.id
       console.log('Posted new Codekeeper comment', { repo: repoFullName, pr_number: prNumber, commentId })
     } else {
       const errorBody = await createResponse.text()
