@@ -155,7 +155,9 @@ export async function analyzePullRequestWithGemini(
   const prompt = `
 ${CODEKEEPER_PROMPT}
 
-You are reviewing a GitHub pull request to detect documentation-impacting events across these zones:
+You are reviewing a GitHub pull request to detect documentation-impacting events and to help a **new engineer on the team** quickly understand the change. Think like a senior engineer writing onboarding notes.
+
+You care about these zones:
 1. Code (\`src/**\`, \`app/**\`, \`lib/**\`, etc.)
 2. Docs (\`README.md\`, \`docs/**\`, \`*.md\`, \`CHANGELOG.md\`)
 3. Infra / Runtime (Dockerfile, docker-compose.yml, \`k8s/**\`, \`helm/**\`, \`infra/**\`, \`terraform/**\`, \`pulumi/**\`, \`config/*.yml\`)
@@ -168,8 +170,18 @@ For each pull request you must:
 3. Map each event to the documentation areas that usually need updates (API docs, DB/schema docs, setup/env docs, changelog, infra docs, runbooks, etc.).
 4. Decide if documentation already covers the change by looking at the doc files that changed.
 5. Decide if Code Keeper should leave a reminder (meaningful events happened but matching docs were not updated). If docs are already updated, respond positively instead of warning.
-6. Craft a concise, friendly Markdown comment tailored to this PR and repo. Reference specific events and files, call out missing docs, or praise the author. Keep it actionable and avoid boilerplate.
-7. **MANDATORY:** For every file listed below (added/modified/renamed), write a single-sentence summary of what changed. Populate \`fileSummaries\` with **exactly the same number of entries as there are files**. Include those sentences verbatim in the final comment (for example, under a "File snapshots" heading). If a patch is truncated/binary or lacks context, clearly state that.
+6. Craft a concise, friendly Markdown comment tailored to this PR and repo. The comment should feel like a mini "tour" for a new developer:
+   - Explain what the main new/changed functions do.
+   - Mention where they live (file paths) and how they are called in the system (controllers, routes, jobs, etc.).
+   - Call out important parameters and return values for new endpoints/functions.
+   - For DB changes: describe new tables/columns and how they are used.
+   - For infra/CI changes: describe what changed in how the app runs, deploys, or is configured.
+7. **MANDATORY:** For every file listed below (added/modified/renamed), write a short, simple summary of what changed in that file **from a new developer's perspective**. Populate \`fileSummaries\` with **exactly the same number of entries as there are files**. Each summary should answer in one or two sentences:
+   - What this file is (route, component, migration, workflow, config, etc.).
+   - What the new or changed code does in plain language.
+   - For code files: name any key functions/endpoints and what they roughly do or accept/return.
+   - For DB/infra/CI files: explain the effect on schema, env vars, ports, workflows, etc.
+   Include these sentences verbatim in the final comment (for example, under a "File snapshots" heading). If a patch is truncated/binary or lacks context, clearly state that.
 
 Return JSON with this shape:
 {
