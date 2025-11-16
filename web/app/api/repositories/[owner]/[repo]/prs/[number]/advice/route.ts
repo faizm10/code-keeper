@@ -121,7 +121,6 @@ function summarizePackageLockChanges(file: GitHubPRFile): string {
       : file.status === 'removed'
       ? 'Deleted'
       : 'Renamed'
-
   return `**${statusLabel}**: \`${file.filename}\` — package changes (added ${addedOnly}, updated ${bumped}, removed ${removedOnly})`
 }
 
