@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server'
 import { getGitHubAccessToken } from '@/lib/github/auth'
 import { createClient } from '@/lib/supabase/server'
+import {
+  analyzePullRequestWithGemini,
+  GeminiPRAnalysis,
+  PRFileForGemini,
+} from '@/lib/gemini/pr-advice'
+import { classifyFile } from '@/lib/pr/file-classification'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,6 +23,7 @@ type GitHubPR = {
   number: number
   title: string
   state: string
+  body?: string | null
   base: {
     sha: string
     ref: string
@@ -44,129 +51,264 @@ type PRAdviceSuggestion = {
   reason: string
 }
 
+type ChangedFileEntry = {
+  path: string
+  status: 'added' | 'modified' | 'removed' | 'renamed'
+}
+
 type PRAdviceResult = {
   codeFiles: string[]
   docFiles: string[]
   importantCodeChanged: boolean
   docsChanged: boolean
   docSuggestions: PRAdviceSuggestion[]
-  allFiles: Array<{
-    path: string
-    status: 'added' | 'modified' | 'removed' | 'renamed'
-  }>
+  allFiles: ChangedFileEntry[]
 }
 
-/**
- * Check if a file should be ignored (tests, stories, generated files, etc.)
- */
-function shouldIgnoreFile(filename: string): boolean {
-  const lowerFilename = filename.toLowerCase()
-  
-  // Test files
-  if (
-    filename.includes('__tests__/') ||
-    filename.includes('/__tests__/') ||
-    filename.includes('/test/') ||
-    filename.includes('/tests/') ||
-    lowerFilename.endsWith('.test.ts') ||
-    lowerFilename.endsWith('.test.tsx') ||
-    lowerFilename.endsWith('.test.js') ||
-    lowerFilename.endsWith('.test.jsx') ||
-    lowerFilename.endsWith('.spec.ts') ||
-    lowerFilename.endsWith('.spec.tsx') ||
-    lowerFilename.endsWith('.spec.js') ||
-    lowerFilename.endsWith('.spec.jsx')
-  ) {
-    return true
+const COMMENT_MARKER = '<!-- codekeeper:advice:v2 -->'
+
+function formatFileList(files: ChangedFileEntry[]) {
+  const added = files.filter((f) => f.status === 'added')
+  const modified = files.filter((f) => f.status === 'modified')
+  const removed = files.filter((f) => f.status === 'removed')
+  const renamed = files.filter((f) => f.status === 'renamed')
+
+  let list = ''
+
+  if (added.length > 0) {
+    list += `\n### Added\n${added.map((f) => `- \`${f.path}\``).join('\n')}\n`
   }
-  
-  // Storybook / demo files
-  if (
-    lowerFilename.endsWith('.stories.tsx') ||
-    lowerFilename.endsWith('.stories.ts') ||
-    lowerFilename.endsWith('.stories.jsx') ||
-    lowerFilename.endsWith('.stories.js') ||
-    filename.includes('.story.')
-  ) {
-    return true
+
+  if (modified.length > 0) {
+    list += `\n### Modified\n${modified.map((f) => `- \`${f.path}\``).join('\n')}\n`
   }
-  
-  // Auto-generated files
-  if (
-    filename.includes('/generated/') ||
-    filename.includes('/.generated/') ||
-    filename.startsWith('generated/') ||
-    filename.includes('/node_modules/') ||
-    filename.includes('/dist/') ||
-    filename.includes('/build/') ||
-    filename.includes('/.next/')
-  ) {
-    return true
+
+  if (removed.length > 0) {
+    list += `\n### Removed\n${removed.map((f) => `- \`${f.path}\``).join('\n')}\n`
   }
-  
-  return false
+
+  if (renamed.length > 0) {
+    list += `\n### Renamed\n${renamed.map((f) => `- \`${f.path}\``).join('\n')}\n`
+  }
+
+  return list
 }
 
-/**
- * Classify a file as code, docs, or other based on path and extension
- * Ignores test files, storybook files, and generated files
- */
-function classifyFile(filename: string): 'code' | 'docs' | 'other' {
-  // Skip ignored files (tests, stories, generated)
-  if (shouldIgnoreFile(filename)) {
-    return 'other'
+type GeminiFileSummary = GeminiPRAnalysis['fileSummaries'][number]
+
+type FileChangeAnalysis = {
+  description: string
+  additions: string[]
+  deletions: string[]
+}
+
+function isPackageLockFile(path: string) {
+  return /package-lock\.json$/i.test(path)
+}
+
+function summarizePackageLockChanges(file: GitHubPRFile): string {
+  const addedVersions = (file.patch?.match(/^\+\s+"version":\s*"[^"]+"/gm) ?? []).length
+  const removedVersions = (file.patch?.match(/^-\s+"version":\s*"[^"]+"/gm) ?? []).length
+  const bumped = Math.min(addedVersions, removedVersions)
+  const addedOnly = Math.max(0, addedVersions - bumped)
+  const removedOnly = Math.max(0, removedVersions - bumped)
+
+  const statusLabel =
+    file.status === 'added'
+      ? 'New'
+      : file.status === 'modified'
+      ? 'Updated'
+      : file.status === 'removed'
+      ? 'Deleted'
+      : 'Renamed'
+  return `**${statusLabel}**: \`${file.filename}\` — package changes (added ${addedOnly}, updated ${bumped}, removed ${removedOnly})`
+}
+
+function extractMeaningfulChanges(patch?: string): FileChangeAnalysis {
+  if (!patch) {
+    return { description: '', additions: [], deletions: [] }
   }
-  
-  const lowerFilename = filename.toLowerCase()
-  
-  // Code file patterns
-  const codePatterns = [
-    /^src\//,
-    /^app\//,
-    /^lib\//,
-    /^server\//,
-    /^components\//,
-    /^pages\//,
-  ]
-  
-  const codeExtensions = [
-    '.ts', '.tsx', '.js', '.jsx',
-    '.go', '.py', '.java', '.cpp', '.c',
-    '.rs', '.rb', '.php', '.swift', '.kt',
-  ]
-  
-  // Docs file patterns
-  const docPatterns = [
-    /^docs\//,
-    /^documentation\//,
-  ]
-  
-  // Check if it's a code file
-  const isCodePath = codePatterns.some(pattern => pattern.test(filename))
-  const isCodeExtension = codeExtensions.some(ext => lowerFilename.endsWith(ext))
-  
-  if (isCodePath || isCodeExtension) {
-    return 'code'
+
+  const additions: string[] = []
+  const deletions: string[] = []
+
+  const lines = patch.split('\n')
+  for (const line of lines) {
+    if (line.startsWith('+++') || line.startsWith('---') || line.startsWith('@@')) {
+      continue
+    }
+
+    if (line.startsWith('+') && line.trim() !== '+') {
+      const content = line.slice(1).trim()
+      if (
+        content &&
+        !content.startsWith('//') &&
+        !content.startsWith('#') &&
+        !content.startsWith('*')
+      ) {
+        additions.push(content)
+      }
+    } else if (line.startsWith('-') && line.trim() !== '-') {
+      const content = line.slice(1).trim()
+      if (
+        content &&
+        !content.startsWith('//') &&
+        !content.startsWith('#') &&
+        !content.startsWith('*')
+      ) {
+        deletions.push(content)
+      }
+    }
   }
-  
-  // Check if it's a docs file
-  const isDocPath = docPatterns.some(pattern => pattern.test(filename))
-  const isMarkdown = lowerFilename.endsWith('.md')
-  const isDocFile = lowerFilename === 'readme.md' || 
-                    lowerFilename === 'changelog.md' ||
-                    lowerFilename.startsWith('readme') ||
-                    lowerFilename.startsWith('changelog')
-  
-  if (isDocPath || (isMarkdown && isDocFile)) {
-    return 'docs'
+
+  const description = generateChangeDescription(additions, deletions, patch)
+  return { description, additions, deletions }
+}
+
+function generateChangeDescription(
+  additions: string[],
+  deletions: string[],
+  fullPatch: string
+): string {
+  const patterns = {
+    newFunction: /^\s*(function|const|let|var)\s+(\w+)\s*[=(]/,
+    newClass: /^\s*class\s+(\w+)/,
+    newImport: /^\s*import\s+.*from/,
+    newExport: /^\s*export\s+(function|const|class|default)/,
+    newType: /^\s*(type|interface)\s+(\w+)/,
+    configChange: /^\s*["']?\w+["']?\s*:/,
+    testCase: /^\s*(it|test|describe)\s*\(/,
   }
-  
-  // Markdown files are generally docs
-  if (isMarkdown) {
-    return 'docs'
+
+  for (const addition of additions.slice(0, 3)) {
+    if (patterns.newFunction.test(addition)) {
+      const match = addition.match(patterns.newFunction)
+      return `Added ${match?.[1] === 'function' ? 'function' : 'method'} \`${match?.[2]}\``
+    }
+    if (patterns.newClass.test(addition)) {
+      const match = addition.match(patterns.newClass)
+      return `Added class \`${match?.[1]}\``
+    }
+    if (patterns.newImport.test(addition)) {
+    const match = addition.match(/import\s+(.*)\s+from\s+['"](.*)['"]/)
+    if (match) {
+      return `Imported ${match[1]} from ${match[2]}`
+    }
+    return 'Added import'
+    }
+    if (patterns.newExport.test(addition)) {
+      return 'Added exports'
+    }
+    if (patterns.newType.test(addition)) {
+      const match = addition.match(patterns.newType)
+      return `Added ${match?.[1]} \`${match?.[2]}\``
+    }
+    if (patterns.testCase.test(addition)) {
+      return 'Added test cases'
+    }
+    if (patterns.configChange.test(addition)) {
+      return 'Updated configuration'
+    }
   }
-  
-  return 'other'
+
+  if (additions.length && deletions.length) {
+    return 'Modified implementation'
+  }
+  if (additions.length) {
+    const snippet = additions.slice(0, 2).join(' | ')
+    return `Added code: ${snippet}`
+  }
+  if (deletions.length) {
+    return 'Removed code'
+  }
+  if (fullPatch.includes('Binary file')) {
+    return 'Updated binary content'
+  }
+  return ''
+}
+
+function getChangeMagnitude(additions: number, deletions: number): string {
+  const total = additions + deletions
+  if (total === 0) return ''
+  if (total < 10) return 'minor change'
+  if (total < 50) return 'moderate change'
+  if (total < 200) return 'significant change'
+  return 'major refactor'
+}
+
+function buildImprovedFileSummary(file: GitHubPRFile): GeminiFileSummary {
+  if (isPackageLockFile(file.filename)) {
+    return {
+      path: file.filename,
+      status: file.status,
+      summary: summarizePackageLockChanges(file),
+    }
+  }
+
+  const analysis = extractMeaningfulChanges(file.patch)
+  const parts: string[] = []
+
+  // Status + file
+  const statusLabel =
+    file.status === 'added'
+      ? 'New'
+      : file.status === 'modified'
+      ? 'Updated'
+      : file.status === 'removed'
+      ? 'Deleted'
+      : 'Renamed'
+  parts.push(`**${statusLabel}**: \`${file.filename}\``)
+
+  // Magnitude if meaningful
+  if (file.status !== 'removed') {
+    const magnitude = getChangeMagnitude(file.additions, file.deletions)
+    if (magnitude) {
+      parts.push(`(${magnitude})`)
+    }
+  }
+
+  // Added code → describe what it does in simple words
+  if (analysis.description && analysis.description.startsWith('Added code:')) {
+    parts.push(
+      `— ${
+        file.additions + file.deletions > 50
+          ? 'Introduces new logic. Highlights: '
+          : ''
+      }${analysis.description.replace('Added code: ', '')}`
+    )
+  } else if (analysis.description) {
+    parts.push(`— ${analysis.description}`)
+  } else if (analysis.additions.length) {
+    const snippet =
+      analysis.additions.length > 1
+        ? analysis.additions.slice(0, 2).join(' | ')
+        : analysis.additions[0]
+    parts.push(`— ${snippet}`)
+  } else if (file.patch && file.patch.includes('Binary file')) {
+    parts.push('— binary content updated')
+  }
+
+  return {
+    path: file.filename,
+    status: file.status,
+    summary: parts.join(' '),
+  }
+}
+
+function buildFallbackFileSummaries(files: GitHubPRFile[]): GeminiFileSummary[] {
+  return files.map((file) => buildImprovedFileSummary(file))
+}
+
+function renderFileSummariesSection(summaries: GeminiFileSummary[]) {
+  if (!summaries.length) {
+    return ''
+  }
+
+  const lines = summaries.map(
+    (summary) => `- ${summary.summary || `${summary.status?.toUpperCase()} \`${summary.path}\``}`
+  )
+
+  return `\n\n### File snapshots\n${lines.join('\n')}`
 }
 
 /**
@@ -262,39 +404,11 @@ function generateCommentBody(
     // Return null to skip commenting for docs-only PRs
     return null
   }
-  
-  // Helper function to format file list
-  const formatFileList = (files: typeof advice.allFiles) => {
-    const added = files.filter(f => f.status === 'added')
-    const modified = files.filter(f => f.status === 'modified')
-    const removed = files.filter(f => f.status === 'removed')
-    const renamed = files.filter(f => f.status === 'renamed')
-    
-    let list = ''
-    
-    if (added.length > 0) {
-      list += `\n### Added\n${added.map(f => `- \`${f.path}\``).join('\n')}\n`
-    }
-    
-    if (modified.length > 0) {
-      list += `\n### Modified\n${modified.map(f => `- \`${f.path}\``).join('\n')}\n`
-    }
-    
-    if (removed.length > 0) {
-      list += `\n### Removed\n${removed.map(f => `- \`${f.path}\``).join('\n')}\n`
-    }
-    
-    if (renamed.length > 0) {
-      list += `\n### Renamed\n${renamed.map(f => `- \`${f.path}\``).join('\n')}\n`
-    }
-    
-    return list
-  }
 
   // Case 1: Code + Docs changed → positive comment (optional, can be shorter)
   if (advice.importantCodeChanged && advice.docsChanged) {
     // Short, friendly comment - or you can return null to skip commenting
-    return `<!-- codekeeper:advice:v1 -->
+    return `${COMMENT_MARKER}
 
 ## 👋 Codekeeper
 
@@ -308,7 +422,7 @@ ${formatFileList(advice.allFiles)}
   
   // Case 2: Code changed but no docs → suggest updating docs
   if (advice.importantCodeChanged && !advice.docsChanged) {
-    let body = `<!-- codekeeper:advice:v1 -->
+    let body = `${COMMENT_MARKER}
 
 ## 👋 Codekeeper
 
@@ -337,31 +451,8 @@ If this affects users or the public API, consider updating:
   return null
 }
 
-async function findExistingComment(
-  owner: string,
-  repo: string,
-  prNumber: number,
-  headers: HeadersInit
-): Promise<number | null> {
-  try {
-    const response = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/issues/${prNumber}/comments`,
-      { headers, cache: 'no-store' }
-    )
 
-    if (!response.ok) return null
 
-    const comments = (await response.json()) as GitHubComment[]
-    const codekeeperComment = comments.find(
-      (c) => c.body.includes('<!-- codekeeper:advice:v1 -->') || c.user.type === 'Bot'
-    )
-
-    return codekeeperComment?.id || null
-  } catch (error) {
-    console.error('Error finding existing comment:', error)
-    return null
-  }
-}
 
 export async function POST(
   request: Request,
@@ -481,15 +572,119 @@ export async function POST(
     }
 
     const files = (await filesResponse.json()) as GitHubPRFile[]
+    const expectedFileSummaryCount = files.length
+    let effectiveFileSummaries: GeminiFileSummary[] = buildFallbackFileSummaries(files)
 
-    // 3. Analyze changes using simple classification
-    // Include all files (added, modified, removed, renamed) for display
+    // 3. Analyze changes using simple classification (fallback + logging)
     const advice = analyzePRChanges(files)
+    const docFilesFromDiff = files
+      .filter((file) => classifyFile(file.filename) === 'docs')
+      .map((file) => file.filename)
 
-    // 4. Generate comment body (may return null for docs-only PRs)
-    const commentBody = generateCommentBody(repoFullName, prNumber, pr.title, advice)
-    
-    // If comment body is null, skip posting (docs-only PR)
+    // 4. Ask Gemini for event + doc obligation analysis
+    const filesForGemini: PRFileForGemini[] = files.map((file) => ({
+      path: file.filename,
+      status: file.status,
+      additions: file.additions,
+      deletions: file.deletions,
+      changes: file.changes,
+      patch: file.patch,
+    }))
+
+    let geminiAnalysis: GeminiPRAnalysis | null = null
+    try {
+      geminiAnalysis = await analyzePullRequestWithGemini({
+        prTitle: pr.title,
+        prNumber,
+        prBody: pr.body ?? '',
+        files: filesForGemini,
+        docFilesTouched: docFilesFromDiff,
+      })
+      if (geminiAnalysis) {
+        const llmSummaries = geminiAnalysis.fileSummaries ?? []
+        if (
+          llmSummaries.length === expectedFileSummaryCount &&
+          llmSummaries.every((summary) => summary?.path)
+        ) {
+          effectiveFileSummaries = llmSummaries
+        } else {
+          console.warn(
+            'Gemini file summaries missing or mismatched. Falling back to heuristic summaries.',
+            {
+              repo: repoFullName,
+              pr_number: prNumber,
+              expected: expectedFileSummaryCount,
+              received: llmSummaries.length,
+            }
+          )
+        }
+
+        console.log('Gemini analysis result', {
+          repo: repoFullName,
+          pr_number: prNumber,
+          zones: geminiAnalysis.zones,
+          events: geminiAnalysis.events,
+          obligations: geminiAnalysis.obligations,
+          docsTouched: geminiAnalysis.docsTouched,
+          missingDocs: geminiAnalysis.missingDocs,
+          shouldWarn: geminiAnalysis.shouldWarn,
+          confidence: geminiAnalysis.confidence,
+          fileSummariesCount: geminiAnalysis.fileSummaries?.length ?? 0,
+        })
+        console.log('Gemini file summaries', effectiveFileSummaries)
+        console.log('Gemini comment preview', geminiAnalysis.comment)
+      }
+    } catch (geminiError) {
+      console.error('Gemini analysis failed:', geminiError)
+      effectiveFileSummaries = buildFallbackFileSummaries(files)
+    }
+
+    // 5. Generate the final comment using Gemini when available
+    let commentBody: string | null = null
+    let skipReason = 'Docs-only PR, no comment posted'
+
+    if (geminiAnalysis) {
+      const llmComment = geminiAnalysis.comment?.trim()
+      if (llmComment) {
+        commentBody = `${COMMENT_MARKER}\n\n${llmComment}${renderFileSummariesSection(
+          effectiveFileSummaries
+        )}`
+      } else if (geminiAnalysis.shouldWarn || geminiAnalysis.events.length > 0) {
+        // Gemini spotted events but failed to return a comment; fall back to heuristics
+        console.warn('Gemini returned events but no comment. Falling back to heuristic template.', {
+          repo: repoFullName,
+          pr_number: prNumber,
+        })
+        const fallback = generateCommentBody(repoFullName, prNumber, pr.title, advice)
+        commentBody = fallback
+          ? `${fallback}${renderFileSummariesSection(effectiveFileSummaries)}`
+          : null
+      } else {
+        skipReason =
+          geminiAnalysis.reasoning || 'Gemini analysis determined docs already cover this change'
+      }
+    } else {
+      const fallbackComment = generateCommentBody(repoFullName, prNumber, pr.title, advice)
+      commentBody = fallbackComment
+        ? `${fallbackComment}${renderFileSummariesSection(effectiveFileSummaries)}`
+        : null
+      if (!commentBody) {
+        skipReason = 'Docs-only PR, no comment posted'
+      }
+    }
+
+    if (!commentBody && effectiveFileSummaries.length) {
+      commentBody = `${COMMENT_MARKER}
+
+## 👋 Codekeeper
+
+Here’s a quick snapshot of this PR.
+${renderFileSummariesSection(effectiveFileSummaries)}
+`
+      skipReason = ''
+    }
+
+    // If comment body is still null (e.g., docs-only PR with no files), skip posting
     if (!commentBody) {
       if (prRunId) {
         await supabase
@@ -506,7 +701,9 @@ export async function POST(
             docsChanged: advice.docsChanged,
             comment_posted: false,
             skipped: true,
-            reason: 'Docs-only PR, no comment needed',
+              reason: skipReason,
+              llmAnalysis: geminiAnalysis,
+              fileSummaries: effectiveFileSummaries,
           },
           })
           .eq('id', prRunId)
@@ -515,37 +712,15 @@ export async function POST(
         success: true,
         run_id: prRunId,
         skipped: true,
-        reason: 'Docs-only PR, no comment posted',
+        reason: skipReason,
         advice,
+        llm_analysis: geminiAnalysis,
+        file_summaries: effectiveFileSummaries,
       })
     }
 
-    // 6. Find existing Codekeeper comment
-    const existingCommentId = await findExistingComment(owner, repo, prNumber, headers)
-
-    // 7. Post or update comment
+    // 6. Always create a fresh comment to avoid overwriting previous context
     let commentId: number | null = null
-
-    if (existingCommentId) {
-      // Update existing comment
-      const updateResponse = await fetch(
-        `https://api.github.com/repos/${owner}/${repo}/issues/comments/${existingCommentId}`,
-        {
-          method: 'PATCH',
-          headers: {
-            ...headers,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ body: commentBody }),
-          cache: 'no-store',
-        }
-      )
-
-      if (updateResponse.ok) {
-        commentId = existingCommentId
-      }
-    } else {
-      // Create new comment
       const createResponse = await fetch(
         `https://api.github.com/repos/${owner}/${repo}/issues/${prNumber}/comments`,
         {
@@ -562,7 +737,16 @@ export async function POST(
       if (createResponse.ok) {
         const comment = await createResponse.json()
         commentId = comment.id
-      }
+      console.log('Posted new Codekeeper comment', { repo: repoFullName, pr_number: prNumber, commentId })
+    } else {
+      const errorBody = await createResponse.text()
+      console.error('Failed to post Codekeeper comment', {
+        repo: repoFullName,
+        pr_number: prNumber,
+        status: createResponse.status,
+        statusText: createResponse.statusText,
+        body: errorBody?.slice(0, 500),
+      })
     }
 
     // 8. Update PR run status
@@ -584,6 +768,9 @@ export async function POST(
             changedFilesCount: advice.allFiles.length,
             comment_posted: commentId !== null,
             fullCommentBody: commentBody, // Store the full comment body
+            llmAnalysis: geminiAnalysis,
+            llmUsed: geminiAnalysis !== null,
+            fileSummaries: effectiveFileSummaries,
           },
         })
         .eq('id', prRunId)
@@ -594,6 +781,8 @@ export async function POST(
       run_id: prRunId,
       comment_id: commentId,
       advice,
+      llm_analysis: geminiAnalysis,
+      file_summaries: effectiveFileSummaries,
     })
   } catch (error) {
     console.error('Error processing PR advice:', error)
