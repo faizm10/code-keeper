@@ -129,6 +129,7 @@ function extractMeaningfulChanges(patch?: string): FileChangeAnalysis {
     return { description: '', additions: [], deletions: [] }
   }
 
+  
   const additions: string[] = []
   const deletions: string[] = []
 
