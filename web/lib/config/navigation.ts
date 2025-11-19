@@ -109,10 +109,15 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
 /**
  * Footer policy links
  */
-export const FOOTER_POLICIES = [
+export interface FooterPolicy {
+  text: string
+  href: string
+}
+
+export const FOOTER_POLICIES: FooterPolicy[] = [
   { text: 'Privacy Policy', href: '/privacy' },
   { text: 'Terms of Service', href: '/terms' },
-] as const
+]
 
 /**
  * Footer copyright text
