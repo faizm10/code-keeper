@@ -22,35 +22,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-
-interface NavItem {
-  title: string
-  href: string
-  icon: React.ElementType
-}
-
-const navItems: NavItem[] = [
-  {
-    title: 'Dashboard',
-    href: '/dashboard',
-    icon: LayoutDashboard,
-  },
-  {
-    title: 'Repositories',
-    href: '/dashboard/repositories',
-    icon: FolderGit2,
-  },
-  {
-    title: 'Snippets',
-    href: '/dashboard/snippets',
-    icon: Code2,
-  },
-  {
-    title: 'Settings',
-    href: '/dashboard/settings',
-    icon: Settings,
-  },
-]
+import { DASHBOARD_NAV_ITEMS } from '@/lib/config/navigation'
 
 interface DashboardSidebarProps {
   userEmail?: string
@@ -82,7 +54,7 @@ export function DashboardSidebar({ userEmail, userName }: DashboardSidebarProps)
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 px-3 py-4">
-        {navItems.map((item) => {
+        {DASHBOARD_NAV_ITEMS.map((item) => {
           const Icon = item.icon
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
           

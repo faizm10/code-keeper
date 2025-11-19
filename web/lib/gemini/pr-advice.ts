@@ -1,4 +1,6 @@
-import { CODEKEEPER_PROMPT, model } from './config'
+import { model } from './config'
+import { buildPRAnalysisPrompt } from './prompts'
+import { DEFAULT_MAX_FILES, DEFAULT_MAX_PATCH_CHARS, GEMINI_MODEL_CONFIG } from '@/lib/config/gemini'
 import { detectRepoZone, RepoZone } from '@/lib/pr/file-classification'
 
 export type PRFileForGemini = {
@@ -40,8 +42,7 @@ type PromptOptions = {
   maxPatchChars?: number
 }
 
-const DEFAULT_MAX_FILES = 18
-const DEFAULT_MAX_PATCH_CHARS = 2000
+// Constants moved to @/lib/config/gemini
 
 function truncateText(value: string, maxChars: number) {
   if (!value) return ''
@@ -148,83 +149,21 @@ export async function analyzePullRequestWithGemini(
   }
 
   const filesContext = buildFileContext(files, maxFiles, maxPatchChars)
-  const docList = docFilesTouched.length
-    ? docFilesTouched.map((doc) => `- ${doc}`).join('\n')
-    : '- None'
 
-  const prompt = `
-${CODEKEEPER_PROMPT}
-
-You are reviewing a GitHub pull request to detect documentation-impacting events and to help a **new engineer on the team** quickly understand the change. Think like a senior engineer writing onboarding notes.
-
-You care about these zones:
-1. Code (\`src/**\`, \`app/**\`, \`lib/**\`, etc.)
-2. Docs (\`README.md\`, \`docs/**\`, \`*.md\`, \`CHANGELOG.md\`)
-3. Infra / Runtime (Dockerfile, docker-compose.yml, \`k8s/**\`, \`helm/**\`, \`infra/**\`, \`terraform/**\`, \`pulumi/**\`, \`config/*.yml\`)
-4. DB / Data (\`prisma/schema.prisma\`, \`migrations/**\`, \`db/**\`, \`sql/**\`, \`supabase/**\`, \`drizzle/**\`)
-5. CI / Automation (\`.github/workflows/**\`, \`.gitlab-ci.yml\`, other CI configs)
-
-For each pull request you must:
-1. Identify the zones touched.
-2. Detect notable events (e.g., NewEndpoint, NewPublicFunction, DbSchemaChanged, NewMigrationFile, DockerfileChanged, DockerComposeChanged, NewEnvVar, WorkflowChanged).
-3. Map each event to the documentation areas that usually need updates (API docs, DB/schema docs, setup/env docs, changelog, infra docs, runbooks, etc.).
-4. Decide if documentation already covers the change by looking at the doc files that changed.
-5. Decide if Code Keeper should leave a reminder (meaningful events happened but matching docs were not updated). If docs are already updated, respond positively instead of warning.
-6. Craft a concise, friendly Markdown comment tailored to this PR and repo. The comment should feel like a mini "tour" for a new developer:
-   - Explain what the main new/changed functions do.
-   - Mention where they live (file paths) and how they are called in the system (controllers, routes, jobs, etc.).
-   - Call out important parameters and return values for new endpoints/functions.
-   - For DB changes: describe new tables/columns and how they are used.
-   - For infra/CI changes: describe what changed in how the app runs, deploys, or is configured.
-7. **MANDATORY:** For every file listed below (added/modified/renamed), write a short, simple summary of what changed in that file **from a new developer's perspective**. Populate \`fileSummaries\` with **exactly the same number of entries as there are files**. Each summary should answer in one or two sentences:
-   - What this file is (route, component, migration, workflow, config, etc.).
-   - What the new or changed code does in plain language.
-   - For code files: name any key functions/endpoints and what they roughly do or accept/return.
-   - For DB/infra/CI files: explain the effect on schema, env vars, ports, workflows, etc.
-   Include these sentences verbatim in the final comment (for example, under a "File snapshots" heading). If a patch is truncated/binary or lacks context, clearly state that.
-
-Return JSON with this shape:
-{
-  "zones": string[],           // zones touched (code, docs, infra, db, ci, config)
-  "events": string[],          // detected event names
-  "obligations": string[],     // doc areas that should be updated
-  "docsTouched": boolean,      // true if relevant docs were edited
-  "docFilesTouched": string[], // subset of doc files that changed
-  "missingDocs": string[],     // doc areas still missing
-  "shouldWarn": boolean,       // true if Code Keeper should flag missing docs
-  "summary": string,           // 1-2 sentence summary for the PR comment
-  "reasoning": string,         // short explanation of your decision
-  "tone": string,              // short description of the tone you used
-  "comment": string,           // full Markdown comment, no code fences, do NOT include the comment marker
-  "fileSummaries": [
-    { "path": string, "status": "added"|"modified"|"removed"|"renamed", "summary": string }
-  ],
-  "confidence": "high" | "medium" | "low"
-}
-
-Always fill every field. Use the event names described above when possible.
-
-PR Title: ${prTitle}
-PR Number: ${prNumber}
-Doc files touched:
-${docList}
-
-All changed files (must summarize each one):
-${files.map((file) => `- ${file.status.toUpperCase()}: ${file.path}`).join('\n')}
-
-Files changed:
-${filesContext}
-`
+  const prompt = buildPRAnalysisPrompt({
+    prTitle,
+    prNumber,
+    docFilesTouched,
+    files: files.map((file) => ({
+      path: file.path,
+      status: file.status,
+    })),
+    filesContext,
+  })
 
   const result = await model.generateContent({
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    generationConfig: {
-      temperature: 0.15,
-      topK: 32,
-      topP: 0.8,
-      maxOutputTokens: 1024,
-      responseMimeType: 'application/json',
-    },
+    generationConfig: GEMINI_MODEL_CONFIG,
   })
 
   const response = await result.response
