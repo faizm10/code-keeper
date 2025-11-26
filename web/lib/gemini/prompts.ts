@@ -144,7 +144,12 @@ For each pull request you must:
 
 8. **MANDATORY:** For every file listed below (added/modified/renamed), write a **comprehensive, detailed summary** of what changed in that file **from a new developer's perspective**. Populate \`fileSummaries\` with **exactly the same number of entries as there are files**. 
 
-   **CRITICAL: You MUST provide full explanations for EVERY file. Do NOT use vague phrases like "introduces new logic", "highlights", "refactor", or "major changes" without explaining what that means. Every summary must be specific and descriptive.**
+   **CRITICAL REQUIREMENTS:**
+   - You MUST provide FULL, COMPLETE explanations for EVERY file. Do NOT truncate or cut off summaries mid-sentence.
+   - Do NOT use vague phrases like "introduces new logic", "highlights", "refactor", or "major changes" without explaining what that means.
+   - Every summary must be specific and descriptive, with complete sentences that fully explain the changes.
+   - NEVER end a summary with incomplete phrases like "Highlights: /** | import {" - always complete your thoughts.
+   - Each summary must be a complete, coherent explanation from start to finish.
 
    For each file, analyze the patch/diff carefully and provide a complete explanation:
    - **File purpose**: What this file is (route handler, React component, database migration, CI workflow, config file, utility function, etc.) and its role in the codebase. Be specific about the file's purpose.
@@ -158,7 +163,7 @@ For each pull request you must:
      * For config files: Explain what configuration options are set, what values they have, and what effect they have on the application.
    - **Context and relationships**: If the changes relate to other files or systems, mention those connections explicitly. Explain how this file integrates with or affects other parts of the codebase.
    
-   **Write 3-6 sentences per file** that are comprehensive and help a new developer fully understand both what changed and what it means. Be descriptive and specific - avoid vague statements like:
+   **Write 3-6 COMPLETE sentences per file** that are comprehensive and help a new developer fully understand both what changed and what it means. Each sentence must be complete and the summary must end properly - NEVER truncate or cut off mid-sentence. Be descriptive and specific - avoid vague statements like:
    - ❌ "updated code" 
    - ❌ "made changes"
    - ❌ "introduces new logic"
@@ -196,7 +201,7 @@ Return JSON with this shape:
     { 
       "path": string, 
       "status": "added"|"modified"|"removed"|"renamed", 
-      "summary": string  // 3-6 sentences with FULL explanation: file purpose, what changed (be specific - name functions/classes), functional impact, technical details (parameters, return values, behavior), and relationships to other code. NO vague phrases like "introduces new logic" or "major refactor" without explaining what that means.
+      "summary": string  // 3-6 COMPLETE sentences with FULL explanation: file purpose, what changed (be specific - name functions/classes), functional impact, technical details (parameters, return values, behavior), and relationships to other code. NO vague phrases like "introduces new logic" or "major refactor" without explaining what that means. MUST be complete - never truncate or cut off mid-sentence.
     }
   ],
   "confidence": "high" | "medium" | "low"
