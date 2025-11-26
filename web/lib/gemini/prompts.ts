@@ -117,23 +117,47 @@ You care about these zones:
 ${zonesList}
 
 For each pull request you must:
-1. Identify the zones touched.
-2. Detect notable events (e.g., ${eventsList}).
-3. Map each event to the documentation areas that usually need updates (${DOCUMENTATION_AREAS.join(', ')}, etc.).
-4. Decide if documentation already covers the change by looking at the doc files that changed.
-5. Decide if Code Keeper should leave a reminder (meaningful events happened but matching docs were not updated). If docs are already updated, respond positively instead of warning.
-6. Craft a concise, friendly Markdown comment tailored to this PR and repo. The comment should feel like a mini "tour" for a new developer:
-   - Explain what the main new/changed functions do.
+1. **Carefully analyze the file changes**: Read through each file's patch/diff in detail. Understand not just what lines changed, but what those changes mean functionally. Look for:
+   - New functions, classes, or components and their purpose
+   - Modified logic and how behavior differs from before
+   - Removed code and what functionality is no longer present
+   - Configuration changes and their runtime effects
+   - Dependencies and how files relate to each other
+
+2. Identify the zones touched.
+
+3. Detect notable events (e.g., ${eventsList}).
+
+4. Map each event to the documentation areas that usually need updates (${DOCUMENTATION_AREAS.join(', ')}, etc.).
+
+5. Decide if documentation already covers the change by looking at the doc files that changed.
+
+6. Decide if Code Keeper should leave a reminder (meaningful events happened but matching docs were not updated). If docs are already updated, respond positively instead of warning.
+
+7. Craft a concise, friendly Markdown comment tailored to this PR and repo. The comment should feel like a mini "tour" for a new developer:
+   - Explain what the main new/changed functions do, with specific details about their behavior.
    - Mention where they live (file paths) and how they are called in the system (controllers, routes, jobs, etc.).
-   - Call out important parameters and return values for new endpoints/functions.
-   - For DB changes: describe new tables/columns and how they are used.
-   - For infra/CI changes: describe what changed in how the app runs, deploys, or is configured.
-7. **MANDATORY:** For every file listed below (added/modified/renamed), write a short, simple summary of what changed in that file **from a new developer's perspective**. Populate \`fileSummaries\` with **exactly the same number of entries as there are files**. Each summary should answer in one or two sentences:
-   - What this file is (route, component, migration, workflow, config, etc.).
-   - What the new or changed code does in plain language.
-   - For code files: name any key functions/endpoints and what they roughly do or accept/return.
-   - For DB/infra/CI files: explain the effect on schema, env vars, ports, workflows, etc.
-   Include these sentences verbatim in the final comment (for example, under a "File snapshots" heading). If a patch is truncated/binary or lacks context, clearly state that.
+   - Call out important parameters, return values, and side effects for new endpoints/functions.
+   - For DB changes: describe new tables/columns, their data types, constraints, relationships, and how they are used in the application.
+   - For infra/CI changes: describe what changed in how the app runs, deploys, or is configured, including any new environment variables, ports, services, or deployment steps.
+   - Explain the impact: What does this change enable? What problems does it solve? What workflows are affected?
+
+8. **MANDATORY:** For every file listed below (added/modified/renamed), write a **detailed, descriptive summary** of what changed in that file **from a new developer's perspective**. Populate \`fileSummaries\` with **exactly the same number of entries as there are files**. 
+
+   For each file, analyze the patch/diff carefully and provide:
+   - **File purpose**: What this file is (route handler, React component, database migration, CI workflow, config file, utility function, etc.) and its role in the codebase.
+   - **Change description**: A clear explanation of what was added, modified, or removed. Be specific about the actual changes made.
+   - **Functional impact**: What the changes accomplish - what new functionality is added, what behavior is modified, or what is removed. Explain the "why" behind the change when it's evident from context.
+   - **Technical details**:
+     * For code files: Name key functions, classes, endpoints, or components that were added/modified. Explain what they do, their parameters, return values, and how they fit into the system (e.g., "This new API endpoint handles POST requests to /api/users and validates user input before creating a new user record").
+     * For database files: Explain schema changes (new tables, columns, indexes, constraints), migration effects, and how data structures are affected.
+     * For infrastructure files: Explain changes to deployment, configuration, environment variables, ports, services, or runtime behavior.
+     * For CI/workflow files: Explain what the workflow does, when it runs, and what actions it performs.
+   - **Context and relationships**: If the changes relate to other files or systems, mention those connections (e.g., "This new utility is used by the authentication middleware" or "This migration adds a foreign key that references the users table").
+   
+   Write 2-4 sentences per file that are informative and help a new developer understand both what changed and what it means. Be descriptive and specific - avoid vague statements like "updated code" or "made changes". Instead, say things like "Added error handling for invalid API tokens that returns 401 status codes" or "Modified the user registration flow to include email verification before account activation".
+   
+   Include these summaries verbatim in the final comment (for example, under a "File snapshots" heading). If a patch is truncated, binary, or lacks sufficient context, clearly state that limitation but still provide as much insight as possible from the available information.
 
 Return JSON with this shape:
 {
@@ -149,7 +173,11 @@ Return JSON with this shape:
   "tone": string,              // short description of the tone you used
   "comment": string,           // full Markdown comment, no code fences, do NOT include the comment marker
   "fileSummaries": [
-    { "path": string, "status": "added"|"modified"|"removed"|"renamed", "summary": string }
+    { 
+      "path": string, 
+      "status": "added"|"modified"|"removed"|"renamed", 
+      "summary": string  // 2-4 sentences describing: file purpose, what changed, functional impact, technical details, and relationships to other code
+    }
   ],
   "confidence": "high" | "medium" | "low"
 }
@@ -164,7 +192,37 @@ ${docList}
 All changed files (must summarize each one):
 ${files.map((file) => `- ${file.status.toUpperCase()}: ${file.path}`).join('\n')}
 
-Files changed:
+---
+
+**IMPORTANT: File Change Analysis**
+
+Below are the detailed file changes with patches/diffs. For each file:
+
+1. **Read the patch carefully**: Analyze the actual code changes line by line. Look at:
+   - Lines starting with + (additions) - what new code was added and why
+   - Lines starting with - (deletions) - what code was removed and what functionality is lost
+   - Context lines (unchanged code) - understand the surrounding code to see how changes fit in
+   - Function signatures, class definitions, imports, exports - understand the structure
+
+2. **Understand the intent**: Based on the changes, infer:
+   - What problem is being solved?
+   - What new capability is being added?
+   - What behavior is being modified?
+   - What dependencies or relationships are being created or removed?
+
+3. **Provide descriptive summaries**: When writing file summaries, be specific about:
+   - The exact changes made (e.g., "Added a new validateToken() function that checks JWT expiration")
+   - The purpose and impact (e.g., "This prevents expired tokens from being accepted, improving security")
+   - Technical details (e.g., "The function accepts a token string and returns a boolean, throwing an error if the token format is invalid")
+   - Integration points (e.g., "This is called by the authentication middleware before processing requests")
+
+4. **For modified files**: Explain what changed from the previous version, not just what the file does now.
+
+5. **For added files**: Explain what new functionality this file introduces to the codebase.
+
+6. **For removed files**: Explain what functionality is being removed and why (if evident).
+
+Files changed with patches:
 ${filesContext}
 `
 }
