@@ -142,22 +142,42 @@ For each pull request you must:
    - For infra/CI changes: describe what changed in how the app runs, deploys, or is configured, including any new environment variables, ports, services, or deployment steps.
    - Explain the impact: What does this change enable? What problems does it solve? What workflows are affected?
 
-8. **MANDATORY:** For every file listed below (added/modified/renamed), write a **detailed, descriptive summary** of what changed in that file **from a new developer's perspective**. Populate \`fileSummaries\` with **exactly the same number of entries as there are files**. 
+8. **MANDATORY:** For every file listed below (added/modified/renamed), write a **comprehensive, detailed summary** of what changed in that file **from a new developer's perspective**. Populate \`fileSummaries\` with **exactly the same number of entries as there are files**. 
 
-   For each file, analyze the patch/diff carefully and provide:
-   - **File purpose**: What this file is (route handler, React component, database migration, CI workflow, config file, utility function, etc.) and its role in the codebase.
-   - **Change description**: A clear explanation of what was added, modified, or removed. Be specific about the actual changes made.
-   - **Functional impact**: What the changes accomplish - what new functionality is added, what behavior is modified, or what is removed. Explain the "why" behind the change when it's evident from context.
-   - **Technical details**:
-     * For code files: Name key functions, classes, endpoints, or components that were added/modified. Explain what they do, their parameters, return values, and how they fit into the system (e.g., "This new API endpoint handles POST requests to /api/users and validates user input before creating a new user record").
-     * For database files: Explain schema changes (new tables, columns, indexes, constraints), migration effects, and how data structures are affected.
-     * For infrastructure files: Explain changes to deployment, configuration, environment variables, ports, services, or runtime behavior.
-     * For CI/workflow files: Explain what the workflow does, when it runs, and what actions it performs.
-   - **Context and relationships**: If the changes relate to other files or systems, mention those connections (e.g., "This new utility is used by the authentication middleware" or "This migration adds a foreign key that references the users table").
+   **CRITICAL: You MUST provide full explanations for EVERY file. Do NOT use vague phrases like "introduces new logic", "highlights", "refactor", or "major changes" without explaining what that means. Every summary must be specific and descriptive.**
+
+   For each file, analyze the patch/diff carefully and provide a complete explanation:
+   - **File purpose**: What this file is (route handler, React component, database migration, CI workflow, config file, utility function, etc.) and its role in the codebase. Be specific about the file's purpose.
+   - **Change description**: A detailed explanation of what was added, modified, or removed. Be specific about the actual changes made - name the functions, classes, variables, or logic that changed. Do NOT say "introduces new logic" - explain WHAT logic was introduced.
+   - **Functional impact**: What the changes accomplish - what new functionality is added, what behavior is modified, or what is removed. Explain the "why" behind the change when it's evident from context. Describe the actual behavior, not just that behavior changed.
+   - **Technical details** (REQUIRED for all files):
+     * For code files: Name ALL key functions, classes, endpoints, or components that were added/modified. Explain what each one does, their parameters, return values, and how they fit into the system. If it's a refactor, explain what was refactored and how the new structure differs from the old.
+     * For database files: Explain ALL schema changes (new tables, columns, indexes, constraints), migration effects, and how data structures are affected. Name the specific tables, columns, and their types.
+     * For infrastructure files: Explain ALL changes to deployment, configuration, environment variables, ports, services, or runtime behavior. Name specific config values, ports, or services.
+     * For CI/workflow files: Explain what the workflow does, when it runs, and what actions it performs. Name the specific jobs, steps, and triggers.
+     * For config files: Explain what configuration options are set, what values they have, and what effect they have on the application.
+   - **Context and relationships**: If the changes relate to other files or systems, mention those connections explicitly. Explain how this file integrates with or affects other parts of the codebase.
    
-   Write 2-4 sentences per file that are informative and help a new developer understand both what changed and what it means. Be descriptive and specific - avoid vague statements like "updated code" or "made changes". Instead, say things like "Added error handling for invalid API tokens that returns 401 status codes" or "Modified the user registration flow to include email verification before account activation".
+   **Write 3-6 sentences per file** that are comprehensive and help a new developer fully understand both what changed and what it means. Be descriptive and specific - avoid vague statements like:
+   - ❌ "updated code" 
+   - ❌ "made changes"
+   - ❌ "introduces new logic"
+   - ❌ "major refactor"
+   - ❌ "highlights: ..."
+   - ❌ "see - this gets off"
    
-   Include these summaries verbatim in the final comment (for example, under a "File snapshots" heading). If a patch is truncated, binary, or lacks sufficient context, clearly state that limitation but still provide as much insight as possible from the available information.
+   Instead, use specific, detailed statements like:
+   - ✅ "Added a new validateToken() function that checks JWT expiration by parsing the token payload and comparing the exp claim to the current timestamp. The function accepts a token string parameter and returns a boolean, throwing a TokenExpiredError if the token is invalid. This is called by the authentication middleware before processing requests to prevent expired tokens from being accepted."
+   - ✅ "Modified the user registration flow in the UserService.register() method to include email verification. The changes add a new step that sends a verification email using the EmailService.sendVerificationEmail() method and sets the user's email_verified field to false until they click the verification link. This improves security by ensuring only verified email addresses can access the account."
+   - ✅ "Refactored the navigation configuration by extracting route definitions from the main layout component into a separate navigation.ts config file. The new file exports a routes array containing objects with path, name, and component properties. This centralizes route management and makes it easier to add or modify navigation items without touching the layout component."
+   
+   **For refactored files**: Explain what was refactored, what the old structure was (if evident), and what the new structure is. Name the specific functions, classes, or patterns that changed.
+   
+   **For new files**: Explain what new functionality this file introduces, what problems it solves, and how it fits into the codebase architecture.
+   
+   **For modified files**: Explain what changed from the previous version, not just what the file does now. Compare the before and after states.
+   
+   Include these summaries verbatim in the final comment (for example, under a "File snapshots" heading). If a patch is truncated, binary, or lacks sufficient context, clearly state that limitation but still provide as much detailed insight as possible from the available information, including file structure, imports, exports, and any visible code patterns.
 
 Return JSON with this shape:
 {
@@ -176,7 +196,7 @@ Return JSON with this shape:
     { 
       "path": string, 
       "status": "added"|"modified"|"removed"|"renamed", 
-      "summary": string  // 2-4 sentences describing: file purpose, what changed, functional impact, technical details, and relationships to other code
+      "summary": string  // 3-6 sentences with FULL explanation: file purpose, what changed (be specific - name functions/classes), functional impact, technical details (parameters, return values, behavior), and relationships to other code. NO vague phrases like "introduces new logic" or "major refactor" without explaining what that means.
     }
   ],
   "confidence": "high" | "medium" | "low"
@@ -215,6 +235,15 @@ Below are the detailed file changes with patches/diffs. For each file:
    - The purpose and impact (e.g., "This prevents expired tokens from being accepted, improving security")
    - Technical details (e.g., "The function accepts a token string and returns a boolean, throwing an error if the token format is invalid")
    - Integration points (e.g., "This is called by the authentication middleware before processing requests")
+   
+   **NEVER use vague phrases** like:
+   - "introduces new logic" (explain WHAT logic)
+   - "major refactor" (explain WHAT was refactored and HOW)
+   - "highlights" (explain the actual content)
+   - "see - this gets off" (explain what "this" is and what it does)
+   - "new functionality" (explain WHAT functionality)
+   
+   **ALWAYS provide full context**: Name specific functions, classes, variables, imports, exports, and explain what they do and how they work together.
 
 4. **For modified files**: Explain what changed from the previous version, not just what the file does now.
 
