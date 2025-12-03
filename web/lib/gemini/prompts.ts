@@ -118,11 +118,16 @@ ${zonesList}
 
 For each pull request you must:
 1. **Carefully analyze the file changes**: Read through each file's patch/diff in detail. Understand not just what lines changed, but what those changes mean functionally. Look for:
-   - New functions, classes, or components and their purpose
-   - Modified logic and how behavior differs from before
+   - New functions, classes, components, hooks, utilities, types, interfaces, enums and their purpose
+   - Modified logic and how behavior differs from before (compare old vs new behavior)
    - Removed code and what functionality is no longer present
    - Configuration changes and their runtime effects
    - Dependencies and how files relate to each other
+   - Code patterns: Are there new patterns being introduced? (e.g., error handling patterns, async patterns, state management patterns)
+   - Architectural changes: Are there structural changes to how the code is organized?
+   - Performance implications: Are there optimizations or potential performance issues?
+   - Security considerations: Are there security improvements or concerns?
+   - Testing changes: Are tests added, modified, or removed? What do they cover?
 
 2. Identify the zones touched.
 
@@ -136,24 +141,67 @@ For each pull request you must:
 
 7. Craft a comprehensive, friendly Markdown comment tailored to this PR and repo. The comment should feel like a detailed "tour" for a new developer. Structure it with clear sections:
 
-   **Comment Structure:**
-   - **Opening Summary** (2-3 sentences): High-level overview of what this PR accomplishes and why it matters.
-   - **Key Changes Overview**: A bulleted list of the most important changes, organized by category (new features, modifications, infrastructure, etc.).
-   - **Detailed Explanation**: For significant changes, provide detailed explanations:
-     * Explain what the main new/changed functions do, with specific details about their behavior, parameters, return values, and error handling.
-     * Mention where they live (file paths) and how they are called in the system (controllers, routes, jobs, event handlers, etc.).
-     * Call out important parameters, return values, side effects, and error cases for new endpoints/functions.
-     * Explain the flow: How do these changes fit into the application's workflow? What triggers them? What happens next?
-   - **Database Changes** (if applicable): Describe new tables/columns, their data types, constraints, relationships, indexes, and how they are used in the application. Explain any migration implications.
-   - **Infrastructure/CI Changes** (if applicable): Describe what changed in how the app runs, deploys, or is configured, including any new environment variables, ports, services, deployment steps, or runtime requirements.
-   - **Impact Analysis**: Explain the impact in detail:
-     * What does this change enable? What new capabilities are unlocked?
-     * What problems does it solve? What issues were addressed?
-     * What workflows are affected? How do users/developers interact with these changes?
-     * Are there any breaking changes? What needs to be updated elsewhere?
-   - **Integration Points**: Explain how these changes connect to other parts of the codebase. What files depend on this? What depends on these changes?
+   **Comment Structure (use proper Markdown formatting):**
    
-   Write a comprehensive comment that gives a new developer everything they need to understand the PR without having to read the code themselves.
+   Start with: ## CodeKeeper (use a friendly greeting emoji if appropriate)
+   
+   - **## Overview** (2-3 sentences): High-level overview of what this PR accomplishes and why it matters. Set the context for the reader.
+   
+   - **## Key Changes** (bulleted list): A well-organized list of the most important changes, grouped by category:
+     * **New Features**: List new functionality added
+     * **Modifications**: List existing functionality that was changed
+     * **Infrastructure**: List infrastructure, deployment, or configuration changes
+     * **Database**: List schema or data-related changes
+     * **Other**: Any other significant changes
+   
+   - **## Detailed Explanation**: For significant changes, provide comprehensive explanations:
+     * For each major change, create a subsection (###) with the feature/component name
+     * Explain what the main new/changed functions do, with specific details about:
+       - Their behavior and purpose
+       - Parameters (names, types, required/optional, default values)
+       - Return values (type, structure, meaning)
+       - Error handling (what errors can occur, how they're handled)
+       - Side effects (what else happens when this runs)
+     * Mention where they live (file paths) and how they are called in the system (controllers, routes, jobs, event handlers, hooks, etc.)
+     * Explain the flow: How do these changes fit into the application's workflow? What triggers them? What happens next? What is the complete execution path?
+     * For UI components: explain what they render, what props they accept, what state they manage, and how users interact with them
+     * For API endpoints: explain the HTTP method, path, request/response formats, authentication requirements, and use cases
+   
+   - **## Database Changes** (if applicable): 
+     * Create subsections for each significant change
+     * Describe new tables/columns, their data types, constraints, relationships, indexes, and how they are used in the application
+     * Explain any migration implications: what data transformations occur, what downtime might be needed, rollback procedures
+     * List any new queries or query modifications that are needed
+   
+   - **## Infrastructure/CI Changes** (if applicable):
+     * Create subsections for each type of change (Docker, CI/CD, environment, etc.)
+     * Describe what changed in how the app runs, deploys, or is configured
+     * List all new environment variables, their purposes, and default values
+     * Explain port changes, service changes, volume mounts, network configurations
+     * Describe deployment steps, build processes, or runtime requirements
+     * Explain any new dependencies or system requirements
+   
+   - **## Impact Analysis**:
+     * **New Capabilities**: What does this change enable? What can users/developers do now that they couldn't before?
+     * **Problems Solved**: What issues were addressed? What bugs were fixed? What limitations were removed?
+     * **Workflow Changes**: What workflows are affected? How do users/developers interact with these changes differently?
+     * **Breaking Changes**: Are there any breaking changes? What needs to be updated elsewhere? What migration steps are required?
+     * **Performance**: Are there any performance implications? Is it faster/slower? More/less memory usage?
+     * **Security**: Are there any security implications? New attack vectors? Security improvements?
+   
+   - **## Integration Points**:
+     * Explain how these changes connect to other parts of the codebase
+     * What files depend on these changes? List specific files and how they use the new/changed code
+     * What do these changes depend on? List dependencies and how they're used
+     * Are there any cross-cutting concerns? (logging, error handling, authentication, etc.)
+     * How do these changes affect the overall architecture?
+   
+   - **## Testing Notes** (if applicable):
+     * Are there new tests? What do they cover?
+     * Are there test modifications? What changed in the test suite?
+     * What should be tested manually?
+   
+   Write a comprehensive, well-structured comment (aim for 300-800 words) that gives a new developer everything they need to understand the PR without having to read the code themselves. Use proper Markdown formatting with headers (##, ###), bullet points, code formatting with backticks for file paths and function names, and emphasis where appropriate.
 
 8. **MANDATORY:** For every file listed below (added/modified/renamed), write a **comprehensive, detailed summary** of what changed in that file **from a new developer's perspective**. Populate \`fileSummaries\` with **exactly the same number of entries as there are files**. 
 
@@ -170,12 +218,20 @@ For each pull request you must:
    - **Functional impact**: What the changes accomplish - what new functionality is added, what behavior is modified, or what is removed. Explain the "why" behind the change when it's evident from context. Describe the actual behavior, not just that behavior changed.
    - **Technical details** (REQUIRED for all files):
      * For code files: 
-       - Name ALL key functions, classes, endpoints, components, hooks, utilities that were added/modified
-       - For each function/class: explain what it does, its parameters (names and types), return values (type and meaning), side effects, error handling
-       - Analyze imports: what libraries/modules are imported and how they're used
-       - Analyze exports: what is exported from this file and how other files might use it
-       - Explain the data flow: how data moves through the functions, what transformations occur
-       - If it's a refactor: explain what was refactored, what the old structure was, what the new structure is, and why the change was made
+       - Name ALL key functions, classes, endpoints, components, hooks, utilities, types, interfaces, enums that were added/modified
+       - For each function/class/component: explain what it does, its parameters (names, types, required/optional, default values), return values (type and meaning), side effects, error handling, async behavior
+       - For React components: explain props (names, types, required/optional), state management, lifecycle hooks used, rendering logic, event handlers
+       - For API routes/endpoints: explain HTTP method, path, request body structure, response structure, status codes, authentication/authorization requirements
+       - For hooks: explain what state/behavior they manage, what they return, when they're used, dependencies
+       - Analyze imports: what libraries/modules are imported, why they're needed, how they're used in the code
+       - Analyze exports: what is exported from this file (functions, classes, types, constants), how other files might use these exports
+       - Explain the data flow: how data moves through the functions, what transformations occur, what state changes happen
+       - Explain error handling: what errors can occur, how they're caught and handled, what error messages are returned
+       - Explain validation: what input validation is performed, what validation rules exist
+       - If it's a refactor: explain what was refactored, what the old structure was, what the new structure is, why the change was made, what benefits it provides
+       - For test files: explain what is being tested, what test cases exist, what mocking is used, what assertions are made
+       - For type definition files: explain what types/interfaces are defined, what they represent, how they're used
+       - For utility files: explain what utilities are provided, what problems they solve, how they're used across the codebase
      * For database files: 
        - Explain ALL schema changes: new tables (with all columns and types), modified columns, indexes, constraints, foreign keys
        - Migration effects: what SQL operations are performed, what data is affected
@@ -191,8 +247,26 @@ For each pull request you must:
        - Explain the workflow's role in the development/deployment pipeline
      * For config files: 
        - Explain what configuration options are set, what values they have, and what effect they have on the application
-       - List all config keys and their purposes
-       - Explain how these settings affect runtime behavior
+       - List all config keys, their types, default values, and their purposes
+       - Explain how these settings affect runtime behavior, performance, or functionality
+       - If environment-specific: explain which environments use which values
+       - If new config was added: explain why it was needed and what it controls
+     * For test files:
+       - Explain what is being tested (which functions, components, or features)
+       - Describe the test cases: what scenarios are covered, what edge cases are tested
+       - Explain what mocking/stubbing is used and why
+       - Describe the test setup and teardown
+       - Explain what assertions are made and what they verify
+     * For style/CSS files:
+       - Explain what styling was added/modified
+       - Describe the design changes: colors, spacing, layout, responsive behavior
+       - Explain what components or elements are affected
+       - If using CSS-in-JS or styled-components: explain the styling approach
+     * For type definition files (.d.ts, types.ts):
+       - Explain what types, interfaces, or enums are defined
+       - Describe what these types represent and how they're used
+       - Explain any type relationships (extends, implements, unions, intersections)
+       - Describe how these types improve type safety
    - **Context and relationships**: If the changes relate to other files or systems, mention those connections explicitly. Explain how this file integrates with or affects other parts of the codebase.
    
    **Write 5-10 COMPLETE sentences per file** that are comprehensive and help a new developer fully understand both what changed and what it means. Each sentence must be complete and the summary must end properly - NEVER truncate or cut off mid-sentence. Be descriptive and specific - avoid vague statements like:
@@ -218,13 +292,55 @@ For each pull request you must:
    - ✅ "This file modifies the user registration service (services/UserService.ts) to include email verification in the registration flow. The UserService.register() method now includes a new step that sends a verification email using the EmailService.sendVerificationEmail() method after creating the user account. The changes set the user's email_verified field to false in the database until the user clicks the verification link sent to their email. The verification link contains a secure token that is validated when clicked, and upon successful verification, the email_verified field is updated to true. This is integrated with the existing user registration endpoint at POST /api/users/register and requires updates to the email service configuration. This improves security by ensuring only verified email addresses can access the account and reduces the risk of fake account creation."
    - ✅ "This file is a new navigation configuration module (lib/config/navigation.ts) that centralizes route definitions for the application. The file was created by extracting route definitions from the main layout component (components/layout/MainLayout.tsx) into a separate configuration file. The new file exports a routes array containing route objects with path, name, component, and metadata properties. Each route object includes the route path (e.g., '/dashboard', '/settings'), a display name, the React component to render, and optional metadata like icon names and permission requirements. This centralizes route management and makes it easier to add or modify navigation items without touching the layout component. The layout component now imports this configuration and uses it to dynamically generate navigation menus. This refactoring improves maintainability and makes the navigation structure more declarative and easier to test."
    
-   **For refactored files**: Explain what was refactored, what the old structure was (if evident), and what the new structure is. Name the specific functions, classes, or patterns that changed.
+   **For refactored files**: 
+   - Explain what was refactored (specific functions, classes, modules, patterns)
+   - Describe the old structure: how was it organized before? What were the problems or limitations?
+   - Describe the new structure: how is it organized now? What improvements were made?
+   - Explain why the refactor was done: what problems does it solve? What benefits does it provide?
+   - Name the specific functions, classes, or patterns that changed
+   - Explain any breaking changes or migration needed
    
-   **For new files**: Explain what new functionality this file introduces, what problems it solves, and how it fits into the codebase architecture.
+   **For new files**: 
+   - Explain what new functionality this file introduces
+   - Describe what problems it solves or what gaps it fills
+   - Explain how it fits into the codebase architecture
+   - Describe its relationship to existing files (what it depends on, what depends on it)
+   - Explain the design decisions: why was this approach chosen?
    
-   **For modified files**: Explain what changed from the previous version, not just what the file does now. Compare the before and after states.
+   **For modified files**: 
+   - Explain what changed from the previous version, not just what the file does now
+   - Compare the before and after states: what was the old behavior? What is the new behavior?
+   - Explain what functionality was added, removed, or modified
+   - Describe any breaking changes or backward compatibility concerns
+   - Explain why these changes were made
    
-   Include these summaries verbatim in the final comment (for example, under a "File snapshots" heading). If a patch is truncated, binary, or lacks sufficient context, clearly state that limitation but still provide as much detailed insight as possible from the available information, including file structure, imports, exports, and any visible code patterns.
+   **For removed files**: 
+   - Explain what functionality is being removed
+   - Describe why it's being removed (deprecated, replaced, no longer needed)
+   - Explain what replaces it (if anything)
+   - Describe any migration needed for code that depended on this file
+   
+   **For renamed files**: 
+   - Explain what the file was renamed from and to
+   - Explain why it was renamed (better naming, organizational changes, etc.)
+   - Describe any import path updates needed
+   - Explain if the functionality changed or if it's just a rename
+   
+   Include these summaries verbatim in the final comment under a "## File Snapshots" heading. Format each file summary as:
+   
+   ### [File Path]
+   **[Status]**: [added/modified/removed/renamed]
+   
+   [Full detailed summary here - 5-10 complete sentences]
+   
+   If a patch is truncated, binary, or lacks sufficient context, clearly state that limitation at the beginning of the summary but still provide as much detailed insight as possible from the available information, including:
+   - File structure and organization
+   - Imports and dependencies (what the file depends on)
+   - Exports (what the file provides)
+   - Visible code patterns and conventions
+   - File size and complexity indicators
+   - Any comments or documentation in the code
+   - File extension and type indicators
 
 Return JSON with this shape:
 {
@@ -238,7 +354,7 @@ Return JSON with this shape:
   "summary": string,           // 2-3 sentence high-level summary for the PR comment opening
   "reasoning": string,         // detailed explanation of your decision and analysis
   "tone": string,              // short description of the tone you used
-  "comment": string,           // comprehensive Markdown comment with clear sections (opening summary, key changes, detailed explanations, impact analysis, integration points). Use proper Markdown formatting with headers, bullet points, and emphasis. No code fences, do NOT include the comment marker. Make it detailed and informative - aim for 200-500 words minimum for the main comment.
+  "comment": string,           // comprehensive Markdown comment with clear sections (CodeKeeper header, overview, key changes, detailed explanations, database/infra changes, impact analysis, integration points, testing notes). Use proper Markdown formatting with headers (##, ###), bullet points, code formatting with backticks for file paths and function names, and emphasis. No code fences, do NOT include the comment marker. Make it detailed and informative - aim for 300-800 words minimum for the main comment. Structure it so a new developer can understand the entire PR without reading the code.
   "fileSummaries": [
     { 
       "path": string, 
@@ -249,7 +365,19 @@ Return JSON with this shape:
   "confidence": "high" | "medium" | "low"
 }
 
-Always fill every field. Use the event names described above when possible.
+Always fill every field completely. Use the event names described above when possible.
+
+**Quality Checklist - Before finalizing your response, verify:**
+- [ ] Every file has a complete summary (5-10 sentences, no truncation)
+- [ ] All summaries name specific functions, classes, methods, variables, or changes (no vague phrases)
+- [ ] The main comment is comprehensive (300-800 words) with all required sections
+- [ ] All file summaries are included in the comment under "## File Snapshots"
+- [ ] The comment uses proper Markdown formatting (headers, bullets, code formatting)
+- [ ] All technical details are explained (parameters, return values, data flow, etc.)
+- [ ] Integration points are clearly described
+- [ ] Impact analysis covers capabilities, problems solved, workflows, and breaking changes
+- [ ] No incomplete sentences or truncated explanations
+- [ ] The response would help a new developer understand the PR without reading code
 
 PR Title: ${prTitle}
 PR Number: ${prNumber}
@@ -282,6 +410,9 @@ Below are the detailed file changes with patches/diffs. For each file:
    - What dependencies or relationships are being created or removed?
    - What is the overall theme or goal of this PR? How do all the file changes work together?
    - Are there patterns across multiple files? (e.g., all files are adding error handling, or all are refactoring to use a new pattern)
+   - Is there a migration or transition happening? (e.g., moving from one library to another, changing architectural patterns)
+   - Are there cross-cutting concerns? (e.g., logging, error handling, authentication changes that affect multiple files)
+   - What is the user/developer impact? How does this change affect the end-user experience or developer workflow?
 
 3. **Provide comprehensive, structured summaries**: When writing file summaries, follow this structure and be specific about:
    
