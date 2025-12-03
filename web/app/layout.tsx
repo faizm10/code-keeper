@@ -6,6 +6,7 @@ import NavbarVisibility from "@/components/layout/navbar-visibility";
 import FooterVisibility from "@/components/layout/footer-visibility";
 import { Toaster } from "@/components/ui/sonner";
 import { createClient } from "@/lib/supabase/server";
+import { FOOTER_COLUMNS, FOOTER_POLICIES, FOOTER_COPYRIGHT } from "@/lib/config/navigation";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,32 +17,6 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
-
-const footerColumns = [
-  {
-    title: "Product",
-    links: [
-      { text: "Features", href: "/features" },
-      { text: "Documentation", href: "/docs" },
-    ],
-  },
-  {
-    title: "Resources",
-    links: [
-      { text: "Guides", href: "/docs/guides" },
-      { text: "API Reference", href: "/docs/api" },
-      { text: "Web App Guide", href: "/docs/web" },
-    ],
-  },
-  {
-    title: "Company",
-    links: [
-      { text: "About", href: "/about" },
-      { text: "Blog", href: "/blog" },
-      { text: "Contact", href: "/contact" },
-    ],
-  },
-];
 export const metadata: Metadata = {
   title: "Code Keeper - Organize Your Code Repositories & Snippets",
   description: "A modern platform for managing code repositories, snippets, and development resources. Built for developers who value organization and efficiency.",
@@ -71,12 +46,9 @@ export default async function RootLayout({
                   CK
                 </div>
               }
-              footerColumns={footerColumns}
-              copyright="© 2025 Code Keeper. All rights reserved."
-              policies={[
-                { text: "Privacy Policy", href: "/privacy" },
-                { text: "Terms of Service", href: "/terms" },
-              ]}
+              footerColumns={FOOTER_COLUMNS}
+              copyright={FOOTER_COPYRIGHT}
+              policies={FOOTER_POLICIES}
               showModeToggle
             />
           </div>
