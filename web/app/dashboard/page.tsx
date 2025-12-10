@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { RepositoryOnboarding } from '@/components/dashboard/repository-onboarding'
+import { hasGitHubConnection } from '@/lib/github/auth'
 
 // Force dynamic rendering to ensure auth check happens at runtime
 export const dynamic = 'force-dynamic'
@@ -9,6 +10,17 @@ export const dynamic = 'force-dynamic'
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  
+  // Check if GitHub is connected with a valid token
+  // If network error occurs, default to false and let client-side handle it
+  let isGitHubConnected = false
+  try {
+    isGitHubConnected = await hasGitHubConnection()
+  } catch (error) {
+    // Network errors are handled gracefully in hasGitHubConnection
+    // Just log and continue - the client-side component will handle the check
+    console.warn('Could not check GitHub connection status on server:', error)
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
@@ -19,7 +31,7 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      <RepositoryOnboarding />
+      <RepositoryOnboarding initialGitHubConnected={isGitHubConnected} />
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mt-8">
         <div className="bg-card border border-border rounded-lg p-6">

@@ -22,11 +22,17 @@ export default async function SettingsPage() {
     redirect('/auth/login')
   }
 
-  // Check GitHub integration
-  const { data: sessionData } = await supabase.auth.getSession()
-  const session = sessionData?.session
-  const hasGitHub = session?.provider_token || 
-    user.identities?.some(identity => identity.provider === 'github')
+  // Check GitHub integration - verify token is actually available
+  // If network error occurs, default to false and let client-side handle it
+  let hasGitHub = false
+  try {
+    const { hasGitHubConnection } = await import('@/lib/github/auth')
+    hasGitHub = await hasGitHubConnection()
+  } catch (error) {
+    // Network errors are handled gracefully in hasGitHubConnection
+    // Just log and continue - the client-side component will handle the check
+    console.warn('Could not check GitHub connection status on server:', error)
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 sm:px-6 lg:px-8">

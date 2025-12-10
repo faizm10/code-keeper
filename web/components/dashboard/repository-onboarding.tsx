@@ -111,7 +111,11 @@ function formatDate(dateString: string) {
   return date.toLocaleString()
 }
 
-export function RepositoryOnboarding() {
+interface RepositoryOnboardingProps {
+  initialGitHubConnected?: boolean
+}
+
+export function RepositoryOnboarding({ initialGitHubConnected = false }: RepositoryOnboardingProps) {
   const [status, setStatus] = useState<OnboardingStatus>('initializing')
   const [repositories, setRepositories] = useState<RepositorySummary[]>([])
   const [selectedRepository, setSelectedRepository] = useState<RepositorySummary | null>(null)
@@ -133,7 +137,24 @@ export function RepositoryOnboarding() {
         cache: 'no-store',
       })
 
+      // Only set needs-auth if we get a clear authentication error
+      // and we don't have initialGitHubConnected flag set
       if (response.status === 401) {
+        // Check if this is a real auth issue or just a temporary token issue
+        const body = await response.json().catch(() => ({}))
+        const errorMessage = typeof body.error === 'string' ? body.error : ''
+        
+        // If GitHub was initially connected, don't immediately show needs-auth
+        // It might be a temporary issue or token refresh needed
+        if (initialGitHubConnected && !errorMessage.includes('Missing GitHub access token')) {
+          setError('Unable to load repositories. Please try refreshing the page.')
+          if (!options?.preserveStatus) {
+            setStatus('select')
+          }
+          setRepositories([])
+          return
+        }
+        
         setStatus('needs-auth')
         setRepositories([])
         return
@@ -143,7 +164,19 @@ export function RepositoryOnboarding() {
         const body = await response.json().catch(() => ({}))
         const message = typeof body.error === 'string' ? body.error : 'Failed to load repositories'
 
-        if (response.status === 400 || response.status === 401) {
+        // Only set needs-auth for clear authentication errors
+        if ((response.status === 400 || response.status === 401) && 
+            message.includes('GitHub') && 
+            (message.includes('token') || message.includes('authentication') || message.includes('reconnect'))) {
+          // If GitHub was initially connected, give it another chance
+          if (initialGitHubConnected && !message.includes('Missing GitHub access token')) {
+            setError('Unable to load repositories. Please try refreshing the page.')
+            if (!options?.preserveStatus) {
+              setStatus('select')
+            }
+            setRepositories([])
+            return
+          }
           setStatus('needs-auth')
           setRepositories([])
           setError(message)
@@ -216,18 +249,33 @@ export function RepositoryOnboarding() {
   useEffect(() => {
     if (typeof window === 'undefined') return
 
+    // If GitHub is already connected, try to load repositories
+    // Only show needs-auth if we're sure there's no connection
+    if (!initialGitHubConnected) {
+      setStatus('needs-auth')
+      return
+    }
+
     const storedStatus = window.localStorage.getItem(LOCAL_STORAGE_KEY)
     if (storedStatus === 'completed') {
       setStatus('completed')
       loadRepositories({ preserveStatus: true }).catch((error) => {
         console.error('Failed to load repositories', error)
+        // If loading fails, check if it's an auth error
+        if (error?.message?.includes('GitHub') || error?.message?.includes('token')) {
+          setStatus('needs-auth')
+        }
       })
     } else {
       loadRepositories().catch((error) => {
         console.error('Failed to load repositories', error)
+        // If loading fails, check if it's an auth error
+        if (error?.message?.includes('GitHub') || error?.message?.includes('token')) {
+          setStatus('needs-auth')
+        }
       })
     }
-  }, [loadRepositories])
+  }, [loadRepositories, initialGitHubConnected])
 
   useEffect(() => {
     setCurrentPage(1)
