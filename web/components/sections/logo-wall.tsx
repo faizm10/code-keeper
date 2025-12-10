@@ -9,6 +9,7 @@ type Organization =
       alt?: string
       width?: number
       height?: number
+      href?: string
     }
 
 interface LogoWallProps {
@@ -44,18 +45,33 @@ export function LogoWall({
               )
             }
             
+            const imageContent = (
+              <Image
+                src={org.logo}
+                alt={org.alt || org.name}
+                width={org.width || 120}
+                height={org.height || 60}
+                className="max-h-12 md:max-h-16 w-auto object-contain"
+              />
+            )
+
             return (
               <div
                 key={index}
                 className="flex items-center justify-center opacity-70 hover:opacity-100 transition-opacity duration-200"
               >
-                <Image
-                  src={org.logo}
-                  alt={org.alt || org.name}
-                  width={org.width || 120}
-                  height={org.height || 60}
-                  className="max-h-12 md:max-h-16 w-auto object-contain"
-                />
+                {org.href ? (
+                  <a
+                    href={org.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded"
+                  >
+                    {imageContent}
+                  </a>
+                ) : (
+                  imageContent
+                )}
               </div>
             )
           })}

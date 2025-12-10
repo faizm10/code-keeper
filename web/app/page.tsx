@@ -79,7 +79,8 @@ export default async function Home({ searchParams }: HomeProps) {
             logo: "/Test3.png",
             alt: "uoguelph.course logo",
             width: 120,
-            height: 60
+            height: 60,
+            href: "https://uoguelph.courses/"
           }
         ]} 
       />
@@ -316,14 +317,6 @@ export default async function Home({ searchParams }: HomeProps) {
                   <p className="text-sm text-muted-foreground">Creates a pull request containing all proposed changes for review and approval</p>
                 </div>
               </div>
-            </div>
-          </div>
-
-          <div className="mt-12 text-center">
-            <div className="inline-block bg-card border border-border rounded-lg p-6">
-              <p className="text-sm text-muted-foreground">
-                <strong>The entire system is containerized using Docker</strong> to facilitate deployment and horizontal scaling
-              </p>
             </div>
           </div>
         </div>
