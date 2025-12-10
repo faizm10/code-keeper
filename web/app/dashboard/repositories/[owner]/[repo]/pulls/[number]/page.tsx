@@ -306,11 +306,11 @@ export default async function PullRequestDetailsPage({
               ) : (
                 <ul className="space-y-3">
                   {files.slice(0, MAX_ITEMS).map((file) => (
-                    <li key={`${file.sha}-${file.filename}`} className="rounded-md border border-border bg-background/80 p-4">
+                    <li key={`${file.sha}-${file.filename}`} className="rounded-md border border-border bg-background/80 p-4 overflow-hidden">
                       <div className="flex flex-col gap-2">
-                        <div className="flex items-center justify-between">
-                          <p className="font-mono text-sm">{file.filename}</p>
-                          <Badge variant="outline" className="text-xs">
+                        <div className="flex items-center justify-between gap-2 min-w-0">
+                          <p className="font-mono text-sm break-words break-all flex-1 min-w-0">{file.filename}</p>
+                          <Badge variant="outline" className="text-xs flex-shrink-0">
                             {file.status.toUpperCase()}
                           </Badge>
                         </div>
