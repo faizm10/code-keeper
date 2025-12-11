@@ -203,29 +203,30 @@ export function RepoAnalysis({ owner, repo }: RepoAnalysisProps) {
   return (
     <div className="space-y-6">
       {/* Header with Analyze Button */}
-      <Card>
+      <Card className="border-border/60 bg-card/50 backdrop-blur-sm">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Repository Analysis</CardTitle>
               <CardDescription>
-                Analyze repository structure, documentation, and activity
+                Scan repository structure, detect documentation files, and analyze codebase statistics
               </CardDescription>
             </div>
             <Button
               onClick={handleAnalyze}
               disabled={analyzing}
               variant="default"
+              className="gap-2"
             >
               {analyzing ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Analyzing...
                 </>
               ) : (
                 <>
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Analyze Repo
+                  <RefreshCw className="h-4 w-4" />
+                  Run Analysis
                 </>
               )}
             </Button>
@@ -237,11 +238,17 @@ export function RepoAnalysis({ owner, repo }: RepoAnalysisProps) {
       {analysis ? (
         <>
           {/* Summary Card */}
-          <Card>
+          <Card className="border-border/60 bg-card/50 backdrop-blur-sm">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Last Analysis</CardTitle>
+                <div>
+                  <CardTitle>Analysis Results</CardTitle>
+                  <CardDescription className="mt-1">
+                    Scanned repository structure and detected documentation files
+                  </CardDescription>
+                </div>
                 <Badge variant="outline" className="text-xs">
+                  <CheckCircle2 className="h-3 w-3 mr-1.5" />
                   {formatDate(analysis.run_at)}
                 </Badge>
               </div>
@@ -249,42 +256,54 @@ export function RepoAnalysis({ owner, repo }: RepoAnalysisProps) {
             <CardContent>
               <div className="grid gap-4 sm:grid-cols-3">
                 {/* Documentation */}
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <FileText className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Documentation</p>
-                    <p className="text-2xl font-bold">{analysis.stats.docs.count}</p>
-                    <p className="text-xs text-muted-foreground">doc files detected</p>
+                <div className="rounded-xl border border-border/60 bg-muted/30 p-4 hover:border-primary/30 transition-colors">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
+                      <FileText className="h-6 w-6" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                        Documentation
+                      </p>
+                      <p className="text-2xl font-bold">{analysis.stats.docs.count}</p>
+                      <p className="text-xs text-muted-foreground mt-1">doc files detected</p>
+                    </div>
                   </div>
                 </div>
 
                 {/* Total Files */}
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <Folder className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total Files</p>
-                    <p className="text-2xl font-bold">{analysis.stats.files.total}</p>
-                    <p className="text-xs text-muted-foreground">files in repository</p>
+                <div className="rounded-xl border border-border/60 bg-muted/30 p-4 hover:border-primary/30 transition-colors">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
+                      <Folder className="h-6 w-6" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                        Total Files
+                      </p>
+                      <p className="text-2xl font-bold">{analysis.stats.files.total.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground mt-1">files in repository</p>
+                    </div>
                   </div>
                 </div>
 
                 {/* Activity */}
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <GitBranch className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Default Branch</p>
-                    <p className="text-lg font-semibold">{analysis.stats.activity.defaultBranch}</p>
-                    {analysis.stats.activity.lastCommitAt && (
-                      <p className="text-xs text-muted-foreground">
-                        Last commit: {formatDate(analysis.stats.activity.lastCommitAt)}
+                <div className="rounded-xl border border-border/60 bg-muted/30 p-4 hover:border-primary/30 transition-colors">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
+                      <GitBranch className="h-6 w-6" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                        Default Branch
                       </p>
-                    )}
+                      <p className="text-lg font-semibold font-mono">{analysis.stats.activity.defaultBranch}</p>
+                      {analysis.stats.activity.lastCommitAt && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Last commit: {formatDate(analysis.stats.activity.lastCommitAt)}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
