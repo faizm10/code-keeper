@@ -616,4 +616,3 @@ Files changed with patches:
 ${filesContext}
 `
 }
-
