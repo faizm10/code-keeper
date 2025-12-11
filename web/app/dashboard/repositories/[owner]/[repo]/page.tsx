@@ -21,6 +21,7 @@ import { RepoHealth } from '@/components/dashboard/repo-health'
 import { RepoAnalysis } from '@/components/dashboard/repo-analysis'
 import { PRRunsList } from '@/components/dashboard/pr-runs-list'
 import { PRChecksTable } from '@/components/dashboard/pr-checks-table'
+import { AnalyzeRepoButton } from '@/components/dashboard/analyze-repo-button'
 
 type GitHubRepoDetails = {
   name: string
@@ -360,10 +361,11 @@ export default async function RepositoryDetailsPage({
                       </div>
 
                       <div className="flex flex-wrap gap-3">
-                        <Button asChild>
-                          <Link href={repository.htmlUrl} target="_blank" rel="noreferrer">
+                        <AnalyzeRepoButton owner={owner} repo={repo} />
+                        <Button asChild variant="outline">
+                          <a href={repository.htmlUrl} target="_blank" rel="noreferrer">
                             View on GitHub
-                          </Link>
+                          </a>
                         </Button>
                       </div>
                     </div>

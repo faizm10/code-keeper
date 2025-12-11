@@ -9,7 +9,8 @@ import {
   Loader2,
   RefreshCw,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  Sparkles
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -72,32 +73,33 @@ export function RepoAnalysis({ owner, repo }: RepoAnalysisProps) {
   const [analysis, setAnalysis] = useState<AnalysisRun | null>(null)
   const [loading, setLoading] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   const repoFullName = `${owner}/${repo}`
 
-  const fetchLatestAnalysis = async () => {
-    try {
-      setLoading(true)
-      const response = await fetch(
-        `/api/repositories/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/analyze/latest`
-      )
-
-      if (response.ok) {
-        const data = await response.json()
-        if (data) {
-          setAnalysis(data)
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching analysis:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   useEffect(() => {
+    const fetchLatestAnalysis = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch(
+          `/api/repositories/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/analyze/latest`
+        )
+
+        if (response.ok) {
+          const data = await response.json()
+          if (data) {
+            setAnalysis(data)
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching analysis:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
     fetchLatestAnalysis()
-  }, [owner, repo])
+  }, [owner, repo, refreshKey])
 
   const handleAnalyze = async () => {
     try {
@@ -116,7 +118,10 @@ export function RepoAnalysis({ owner, repo }: RepoAnalysisProps) {
 
       const data = await response.json()
       setAnalysis(data)
-      toast.success('Repository analyzed successfully!')
+      setRefreshKey(prev => prev + 1) // Trigger refresh
+      toast.success('Repository analyzed successfully!', {
+        description: `Found ${data.stats.docs.count} documentation files and ${data.stats.files.total.toLocaleString()} total files`,
+      })
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to analyze repository')
     } finally {
@@ -203,29 +208,30 @@ export function RepoAnalysis({ owner, repo }: RepoAnalysisProps) {
   return (
     <div className="space-y-6">
       {/* Header with Analyze Button */}
-      <Card>
+      <Card className="border-border/60 bg-card/50 backdrop-blur-sm">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Repository Analysis</CardTitle>
               <CardDescription>
-                Analyze repository structure, documentation, and activity
+                Scan repository structure, detect documentation files, and analyze codebase statistics
               </CardDescription>
             </div>
             <Button
               onClick={handleAnalyze}
               disabled={analyzing}
               variant="default"
+              className="gap-2"
             >
               {analyzing ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Analyzing...
                 </>
               ) : (
                 <>
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Analyze Repo
+                  <RefreshCw className="h-4 w-4" />
+                  Run Analysis
                 </>
               )}
             </Button>
@@ -237,11 +243,17 @@ export function RepoAnalysis({ owner, repo }: RepoAnalysisProps) {
       {analysis ? (
         <>
           {/* Summary Card */}
-          <Card>
+          <Card className="border-border/60 bg-card/50 backdrop-blur-sm">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Last Analysis</CardTitle>
+                <div>
+                  <CardTitle>Analysis Results</CardTitle>
+                  <CardDescription className="mt-1">
+                    Scanned repository structure and detected documentation files
+                  </CardDescription>
+                </div>
                 <Badge variant="outline" className="text-xs">
+                  <CheckCircle2 className="h-3 w-3 mr-1.5" />
                   {formatDate(analysis.run_at)}
                 </Badge>
               </div>
@@ -249,42 +261,54 @@ export function RepoAnalysis({ owner, repo }: RepoAnalysisProps) {
             <CardContent>
               <div className="grid gap-4 sm:grid-cols-3">
                 {/* Documentation */}
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <FileText className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Documentation</p>
-                    <p className="text-2xl font-bold">{analysis.stats.docs.count}</p>
-                    <p className="text-xs text-muted-foreground">doc files detected</p>
+                <div className="rounded-xl border border-border/60 bg-muted/30 p-4 hover:border-primary/30 transition-colors">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
+                      <FileText className="h-6 w-6" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                        Documentation
+                      </p>
+                      <p className="text-2xl font-bold">{analysis.stats.docs.count}</p>
+                      <p className="text-xs text-muted-foreground mt-1">doc files detected</p>
+                    </div>
                   </div>
                 </div>
 
                 {/* Total Files */}
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <Folder className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total Files</p>
-                    <p className="text-2xl font-bold">{analysis.stats.files.total}</p>
-                    <p className="text-xs text-muted-foreground">files in repository</p>
+                <div className="rounded-xl border border-border/60 bg-muted/30 p-4 hover:border-primary/30 transition-colors">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
+                      <Folder className="h-6 w-6" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                        Total Files
+                      </p>
+                      <p className="text-2xl font-bold">{analysis.stats.files.total.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground mt-1">files in repository</p>
+                    </div>
                   </div>
                 </div>
 
                 {/* Activity */}
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <GitBranch className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Default Branch</p>
-                    <p className="text-lg font-semibold">{analysis.stats.activity.defaultBranch}</p>
-                    {analysis.stats.activity.lastCommitAt && (
-                      <p className="text-xs text-muted-foreground">
-                        Last commit: {formatDate(analysis.stats.activity.lastCommitAt)}
+                <div className="rounded-xl border border-border/60 bg-muted/30 p-4 hover:border-primary/30 transition-colors">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
+                      <GitBranch className="h-6 w-6" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                        Default Branch
                       </p>
-                    )}
+                      <p className="text-lg font-semibold font-mono">{analysis.stats.activity.defaultBranch}</p>
+                      {analysis.stats.activity.lastCommitAt && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Last commit: {formatDate(analysis.stats.activity.lastCommitAt)}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -293,88 +317,96 @@ export function RepoAnalysis({ owner, repo }: RepoAnalysisProps) {
 
           {/* Documentation Files */}
           {analysis.stats.docs.files.length > 0 && (
-            <Card>
+            <Card className="border-border/60 bg-card/50 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle>Documentation Files</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-primary" />
+                  Documentation Files
+                </CardTitle>
                 <CardDescription>
-                  Detected {analysis.stats.docs.count} documentation file{analysis.stats.docs.count !== 1 ? 's' : ''}
+                  Detected {analysis.stats.docs.count} documentation file{analysis.stats.docs.count !== 1 ? 's' : ''} in the repository
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
+                <div className="grid gap-2 sm:grid-cols-2">
                   {analysis.stats.docs.files.slice(0, 20).map((file) => (
                     <div
                       key={file}
-                      className="flex items-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-2 text-sm"
+                      className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/30 px-3 py-2.5 text-sm hover:border-primary/30 hover:bg-muted/50 transition-colors"
                     >
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                      <code className="font-mono text-xs">{file}</code>
+                      <FileText className="h-4 w-4 text-primary shrink-0" />
+                      <code className="font-mono text-xs truncate flex-1">{file}</code>
                     </div>
                   ))}
-                  {analysis.stats.docs.files.length > 20 && (
-                    <p className="text-xs text-muted-foreground pt-2">
-                      + {analysis.stats.docs.files.length - 20} more files
-                    </p>
-                  )}
                 </div>
+                {analysis.stats.docs.files.length > 20 && (
+                  <p className="text-xs text-muted-foreground pt-3 border-t border-border/60 mt-3">
+                    + {analysis.stats.docs.files.length - 20} more documentation files
+                  </p>
+                )}
               </CardContent>
             </Card>
           )}
 
           {/* File Extensions */}
-          <Card>
+          <Card className="border-border/60 bg-card/50 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle>Files by Extension</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Folder className="h-5 w-5 text-primary" />
+                Files by Extension
+              </CardTitle>
               <CardDescription>
-                Breakdown of file types in the repository
+                Breakdown of file types and extensions in the repository
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
+              <div className="grid gap-2 sm:grid-cols-2">
                 {Object.entries(analysis.stats.files.byExtension)
                   .sort(([, a], [, b]) => b - a)
-                  .slice(0, 15)
+                  .slice(0, 20)
                   .map(([ext, count]) => (
                     <div
                       key={ext}
-                      className="flex items-center justify-between rounded-md border border-border bg-muted/30 px-3 py-2"
+                      className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/30 px-3 py-2.5 hover:border-primary/30 hover:bg-muted/50 transition-colors"
                     >
-                      <span className="font-mono text-sm">
+                      <span className="font-mono text-sm font-medium">
                         {ext || '(no extension)'}
                       </span>
-                      <Badge variant="secondary">{count}</Badge>
+                      <Badge variant="secondary" className="font-semibold">{count.toLocaleString()}</Badge>
                     </div>
                   ))}
-                {Object.keys(analysis.stats.files.byExtension).length > 15 && (
-                  <p className="text-xs text-muted-foreground pt-2">
-                    + {Object.keys(analysis.stats.files.byExtension).length - 15} more extensions
-                  </p>
-                )}
               </div>
+              {Object.keys(analysis.stats.files.byExtension).length > 20 && (
+                <p className="text-xs text-muted-foreground pt-3 border-t border-border/60 mt-3">
+                  + {Object.keys(analysis.stats.files.byExtension).length - 20} more file extensions
+                </p>
+              )}
             </CardContent>
           </Card>
         </>
       ) : (
-        <Card>
+        <Card className="border-border/60 bg-card/50 backdrop-blur-sm">
           <CardContent className="pt-6">
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <AlertCircle className="h-12 w-12 text-muted-foreground/50 mb-4" />
-              <p className="text-lg font-medium text-muted-foreground mb-2">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted/50 mb-4">
+                <AlertCircle className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <p className="text-lg font-semibold mb-2">
                 No analysis yet
               </p>
-              <p className="text-sm text-muted-foreground mb-4">
-                Click "Analyze Repo" to run your first analysis
+              <p className="text-sm text-muted-foreground mb-6 max-w-md">
+                Run an analysis to scan the repository structure, detect documentation files, and get insights about your codebase
               </p>
-              <Button onClick={handleAnalyze} disabled={analyzing}>
+              <Button onClick={handleAnalyze} disabled={analyzing} className="gap-2">
                 {analyzing ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                     Analyzing...
                   </>
                 ) : (
                   <>
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Analyze Repo
+                    <Sparkles className="h-4 w-4" />
+                    Run Analysis
                   </>
                 )}
               </Button>
