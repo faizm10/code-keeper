@@ -310,28 +310,28 @@ export function RepositoriesList({
                   href={`/dashboard/repositories/${encodeURIComponent(repo.owner.login)}/${encodeURIComponent(repo.name)}`}
                   className="group block"
                 >
-                  <Card className="h-full transition-all hover:shadow-md hover:shadow-primary/5 hover:border-primary/30 hover:-translate-y-1 cursor-pointer border-border/50 bg-card/50 backdrop-blur-sm">
+                  <Card className="h-full transition-all hover:shadow-lg hover:shadow-primary/10 hover:border-primary/50 hover:-translate-y-1 cursor-pointer border-border/60 bg-card/50 backdrop-blur-sm">
                     <CardContent className="pt-6">
                       <div className="space-y-4">
                         {/* Header with Icon and Badge */}
-                        <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start justify-between gap-3">
                           <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <div className={`flex h-10 w-10 items-center justify-center rounded-lg flex-shrink-0 ${
+                            <div className={`flex h-12 w-12 items-center justify-center rounded-xl flex-shrink-0 transition-colors ${
                               repo.private 
-                                ? 'bg-destructive/10 text-destructive' 
-                                : 'bg-primary/10 text-primary'
+                                ? 'bg-destructive/10 text-destructive group-hover:bg-destructive/20' 
+                                : 'bg-primary/10 text-primary group-hover:bg-primary/20'
                             }`}>
                               {repo.private ? (
-                                <Lock className="h-5 w-5" />
+                                <Lock className="h-6 w-6" />
                               ) : (
-                                <Globe className="h-5 w-5" />
+                                <Globe className="h-6 w-6" />
                               )}
                             </div>
                             <div className="min-w-0 flex-1">
                               <h3 className="font-semibold text-base truncate group-hover:text-primary transition-colors">
                                 {repo.name}
                               </h3>
-                              <p className="text-xs text-muted-foreground truncate mt-0.5">
+                              <p className="text-xs text-muted-foreground truncate mt-1">
                                 {repo.owner.login}
                               </p>
                             </div>
@@ -354,18 +354,18 @@ export function RepositoriesList({
                         {/* Stats Row */}
                         <div className="flex items-center gap-4 text-xs">
                           {repo.language && (
-                            <div className="flex items-center gap-1.5 text-foreground/70">
-                              <div className="h-2 w-2 rounded-full bg-primary"></div>
+                            <div className="flex items-center gap-1.5 text-foreground/80">
+                              <div className="h-2.5 w-2.5 rounded-full bg-primary"></div>
                               <span className="font-medium">{repo.language}</span>
                             </div>
                           )}
-                          <div className="flex items-center gap-1 text-muted-foreground">
-                            <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-                            <span>{repo.stargazers_count.toLocaleString()}</span>
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <Star className="h-4 w-4 fill-yellow-400/80 text-yellow-400/80" />
+                            <span className="font-medium">{repo.stargazers_count.toLocaleString()}</span>
                           </div>
-                          <div className="flex items-center gap-1 text-muted-foreground">
-                            <GitFork className="h-3.5 w-3.5" />
-                            <span>{repo.forks_count.toLocaleString()}</span>
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <GitFork className="h-4 w-4" />
+                            <span className="font-medium">{repo.forks_count.toLocaleString()}</span>
                           </div>
                         </div>
 
@@ -393,7 +393,7 @@ export function RepositoriesList({
                         )}
 
                         {/* Footer with Update Time */}
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground pt-3 border-t border-border/50">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground pt-3 border-t border-border/60">
                           <Calendar className="h-3.5 w-3.5" />
                           <span>Updated {formatDate(repo.pushed_at)}</span>
                         </div>
