@@ -26,7 +26,9 @@ export type GeminiPRAnalysis = {
   fileSummaries: Array<{
     path: string
     status?: 'added' | 'modified' | 'removed' | 'renamed'
+    changeMagnitude?: 'minor' | 'moderate' | 'significant'
     summary: string
+    conciseSummary?: string
   }>
   tone?: string
   confidence?: 'high' | 'medium' | 'low'

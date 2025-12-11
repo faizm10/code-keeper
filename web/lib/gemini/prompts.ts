@@ -211,8 +211,11 @@ For each pull request you must:
    - Every summary must be specific and descriptive, with complete sentences that fully explain the changes.
    - NEVER end a summary with incomplete phrases like "Highlights: /** | import {" - always complete your thoughts.
    - Each summary must be a complete, coherent explanation from start to finish.
+   - **EXPANDED FEEDBACK**: Each file summary must be comprehensive and detailed, providing extensive context and analysis.
 
-   For each file, analyze the patch/diff carefully and provide a complete explanation:
+   **EXPANDED FILE ANALYSIS STRUCTURE:**
+   
+   For each file, analyze the patch/diff carefully and provide a complete, expanded explanation following this structure:
    - **File purpose**: What this file is (route handler, React component, database migration, CI workflow, config file, utility function, etc.) and its role in the codebase. Be specific about the file's purpose.
    - **Change description**: A detailed explanation of what was added, modified, or removed. Be specific about the actual changes made - name the functions, classes, variables, or logic that changed. Do NOT say "introduces new logic" - explain WHAT logic was introduced.
    - **Functional impact**: What the changes accomplish - what new functionality is added, what behavior is modified, or what is removed. Explain the "why" behind the change when it's evident from context. Describe the actual behavior, not just that behavior changed.
@@ -269,15 +272,60 @@ For each pull request you must:
        - Describe how these types improve type safety
    - **Context and relationships**: If the changes relate to other files or systems, mention those connections explicitly. Explain how this file integrates with or affects other parts of the codebase.
    
-   **Write 5-10 COMPLETE sentences per file** that are comprehensive and help a new developer fully understand both what changed and what it means. Each sentence must be complete and the summary must end properly - NEVER truncate or cut off mid-sentence. Be descriptive and specific - avoid vague statements like:
+   **Write 8-15 COMPLETE sentences per file** that are comprehensive and help a new developer fully understand both what changed and what it means. Each sentence must be complete and the summary must end properly - NEVER truncate or cut off mid-sentence. Be descriptive and specific - avoid vague statements like:
    
-   **Each file summary should include:**
-   - **File identification** (1-2 sentences): What type of file is this and what is its role in the codebase?
-   - **Change overview** (1-2 sentences): What was added, modified, or removed at a high level?
-   - **Detailed change description** (2-4 sentences): Specific details about what changed - name functions, classes, methods, variables, imports, exports, configuration values, etc.
-   - **Technical implementation** (1-2 sentences): How does it work? What are the key technical details (parameters, return types, data flow, algorithms, etc.)?
-   - **Integration and usage** (1-2 sentences): How does this file relate to other files? Where is it used? What depends on it?
-   - **Impact and purpose** (1 sentence): Why does this change matter? What problem does it solve or what capability does it add?
+   **EXPANDED FILE SUMMARY STRUCTURE (8-15 sentences minimum):**
+   
+   Each file summary MUST include ALL of the following sections in detail:
+   
+   a. **File Identification & Context** (2-3 sentences):
+      - What type of file is this? (route handler, React component, service class, utility function, database migration, CI workflow, config file, test file, type definition, etc.)
+      - What is its role in the codebase? Where does it fit in the application architecture?
+      - What is the file's relationship to the overall system? (e.g., "This is a Next.js API route handler that processes authentication requests")
+      - What layer does it belong to? (presentation, business logic, data access, infrastructure, etc.)
+   
+   b. **Change Overview & Scope** (2-3 sentences):
+      - What was added, modified, or removed at a high level?
+      - What is the scope of changes? (entire file is new, specific functions changed, entire class refactored, etc.)
+      - What percentage or portion of the file changed? (if modified, not new)
+      - What was the previous state? (if modified or removed, describe what existed before)
+   
+   c. **Detailed Change Description** (3-5 sentences):
+      - **Name ALL specific changes**: List every function, class, method, variable, constant, type, interface, enum, import, export, configuration value, route, endpoint, component, hook, utility, etc. that was added/modified/removed
+      - **For each named item**: Explain what it does, what it accepts (parameters with types), what it returns (return type and structure), what side effects it has, what errors it can throw, what validation it performs
+      - **For imports**: List what libraries/modules are imported, why they're needed, how they're used in the code, what functionality they provide
+      - **For exports**: List what is exported from this file (functions, classes, types, constants), how other files might use these exports, what API this file provides
+      - **For configuration**: List all config keys, their values, types, default values, purposes, and effects on runtime behavior
+      - **For refactors**: Explain what was refactored (specific functions/classes/patterns), what the old structure was (how it worked before), what the new structure is (how it works now), why the change was made (what problems it solves), what benefits it provides (maintainability, performance, readability, etc.)
+      - **For UI components**: Explain what the component renders, what props it accepts (names, types, required/optional, default values), what state it manages, what lifecycle hooks it uses, what event handlers it has, how users interact with it, what styling it uses
+      - **For API endpoints**: Explain the HTTP method, path/route, request body structure (fields, types, validation), response structure (status codes, body format), authentication/authorization requirements, error responses, use cases
+      - **For hooks**: Explain what state/behavior they manage, what they return (structure and types), when they're used, what dependencies they have, what side effects they cause
+      - **For services/utilities**: Explain what problems they solve, what operations they perform, what algorithms or patterns they use, how they're used across the codebase
+   
+   d. **Technical Implementation Details** (2-3 sentences):
+      - **How does it work?** Explain the implementation approach, algorithms, patterns, or techniques used
+      - **Data flow**: How does data move through the functions? What transformations occur? What state changes happen? What is the execution flow?
+      - **Async behavior**: Are there async operations? How are promises/async-await handled? What is the concurrency model?
+      - **Error handling**: What errors can occur? How are they caught and handled? What error messages are returned? What logging is performed?
+      - **Validation**: What input validation is performed? What validation rules exist? What happens when validation fails?
+      - **Performance**: Are there any performance considerations? (caching, memoization, optimization techniques, potential bottlenecks)
+      - **Security**: Are there any security considerations? (authentication, authorization, input sanitization, SQL injection prevention, XSS prevention, etc.)
+      - **Dependencies**: What libraries or frameworks are used? Why were they chosen? How are they integrated?
+   
+   e. **Integration Points & Relationships** (2-3 sentences):
+      - **Where is this file used?** List specific files that import or depend on this file, and how they use it
+      - **What does this file depend on?** List specific files this file imports, and what functionality it gets from them
+      - **How is it called/invoked?** (API endpoints, event handlers, scheduled jobs, React components, hooks, etc.)
+      - **What part of the application flow does it participate in?** Explain the complete execution path: what triggers it, what happens during execution, what happens after
+      - **Are there any cross-cutting concerns?** (logging, error handling, authentication, authorization, caching, etc.)
+      - **How does it affect the overall architecture?** Does it introduce new patterns? Does it change existing patterns?
+   
+   f. **Impact, Purpose & Benefits** (1-2 sentences):
+      - **Why does this change matter?** What problem does it solve? What issue or limitation does it address?
+      - **What new capability does it add?** What can users/developers do now that they couldn't before?
+      - **What behavior does it change?** How does the new behavior differ from the old? What workflows are affected?
+      - **What are the benefits?** (improved performance, better maintainability, enhanced security, better user experience, etc.)
+      - **Are there any trade-offs?** (increased complexity, additional dependencies, breaking changes, etc.)
    
    Be descriptive and specific - avoid vague statements like:
    - ❌ "updated code" 
@@ -329,9 +377,31 @@ For each pull request you must:
    Include these summaries verbatim in the final comment under a "## File Snapshots" heading. Format each file summary as:
    
    ### [File Path]
-   **[Status]**: [added/modified/removed/renamed]
+   **Status**: [added/modified/removed/renamed]
    
-   [Full detailed summary here - 5-10 complete sentences]
+   [Full detailed summary here - 8-15 complete sentences following the expanded structure]
+   
+   After the detailed "## File Snapshots" section, you MUST also include a concise "## File snapshots" section (lowercase) that provides a quick reference summary. This section should be formatted as a simple list with one entry per file. Format each entry as:
+   
+   [Status]: [File Path] ([change magnitude]) — [One-line concise description of the key change]
+   
+   **IMPORTANT**: The concise section should use the exact format shown in the examples below. Do NOT use bullet points (-) or dashes, just plain lines without any list markers.
+   
+   Examples of the correct format:
+   Updated: web/app/dashboard/page.tsx (moderate change) — Imported { hasGitHubConnection } from @/lib/github/auth
+   Updated: web/app/dashboard/settings/page.tsx (moderate change) — Added method hasGitHub
+   Updated: web/components/dashboard/repository-onboarding.tsx (significant change) — Added interface RepositoryOnboardingProps
+   Updated: web/lib/github/auth.ts (significant change) — Added function isNetworkError
+   Updated: web/package-lock.json — package changes (added 0, updated 1, removed 0)
+   Updated: web/package.json (minor change) — Modified implementation
+   
+   The concise format rules:
+   - Use "Updated:" prefix for modified files, "Added:" for new files, "Removed:" for deleted files, "Renamed:" for renamed files
+   - Include change magnitude in parentheses: (minor change), (moderate change), or (significant change) - omit if not applicable (e.g., package-lock.json)
+   - Provide a one-line description focusing on the most important change (key function added, main import, primary modification, etc.)
+   - For package files, include package change summary if applicable (e.g., "package changes (added 0, updated 1, removed 0)")
+   - Use the conciseSummary field from fileSummaries for each file's description
+   - Keep descriptions brief and focused on the single most important change
    
    If a patch is truncated, binary, or lacks sufficient context, clearly state that limitation at the beginning of the summary but still provide as much detailed insight as possible from the available information, including:
    - File structure and organization
@@ -354,12 +424,14 @@ Return JSON with this shape:
   "summary": string,           // 2-3 sentence high-level summary for the PR comment opening
   "reasoning": string,         // detailed explanation of your decision and analysis
   "tone": string,              // short description of the tone you used
-  "comment": string,           // comprehensive Markdown comment with clear sections (CodeKeeper header, overview, key changes, detailed explanations, database/infra changes, impact analysis, integration points, testing notes). Use proper Markdown formatting with headers (##, ###), bullet points, code formatting with backticks for file paths and function names, and emphasis. No code fences, do NOT include the comment marker. Make it detailed and informative - aim for 300-800 words minimum for the main comment. Structure it so a new developer can understand the entire PR without reading the code.
+  "comment": string,           // comprehensive Markdown comment with clear sections (CodeKeeper header, overview, key changes, detailed explanations, database/infra changes, impact analysis, integration points, testing notes, File Snapshots with detailed summaries, File snapshots with concise summaries). Use proper Markdown formatting with headers (##, ###), bullet points, code formatting with backticks for file paths and function names, and emphasis. No code fences, do NOT include the comment marker. Make it detailed and informative - aim for 300-800 words minimum for the main comment. Structure it so a new developer can understand the entire PR without reading the code. MUST include both "## File Snapshots" (detailed) and "## File snapshots" (concise) sections.
   "fileSummaries": [
     { 
       "path": string, 
-      "status": "added"|"modified"|"removed"|"renamed", 
-      "summary": string  // 5-10 COMPLETE sentences with FULL explanation: file identification and role, change overview, detailed change description (name functions/classes/methods/variables), technical implementation details (parameters, return values, data flow, algorithms), integration points (how it relates to other files), and impact/purpose. NO vague phrases like "introduces new logic" or "major refactor" without explaining what that means. MUST be complete - never truncate or cut off mid-sentence.
+      "status": "added"|"modified"|"removed"|"renamed",
+      "changeMagnitude": "minor"|"moderate"|"significant",  // Assess the scope of changes
+      "summary": string,  // 8-15 COMPLETE sentences with FULL, EXPANDED explanation following the detailed structure: file identification and context (2-3 sentences), change overview and scope (2-3 sentences), detailed change description naming ALL functions/classes/methods/variables/imports/exports/configs (3-5 sentences), technical implementation details including data flow, async behavior, error handling, validation, performance, security (2-3 sentences), integration points and relationships with other files (2-3 sentences), and impact/purpose/benefits (1-2 sentences). NO vague phrases like "introduces new logic" or "major refactor" without explaining what that means. MUST be complete - never truncate or cut off mid-sentence. Provide extensive context and analysis.
+      "conciseSummary": string  // One-line concise description for the "File snapshots" section, e.g., "Imported { hasGitHubConnection } from @/lib/github/auth" or "Added function isNetworkError". Focus on the most important change.
     }
   ],
   "confidence": "high" | "medium" | "low"
@@ -368,16 +440,24 @@ Return JSON with this shape:
 Always fill every field completely. Use the event names described above when possible.
 
 **Quality Checklist - Before finalizing your response, verify:**
-- [ ] Every file has a complete summary (5-10 sentences, no truncation)
-- [ ] All summaries name specific functions, classes, methods, variables, or changes (no vague phrases)
+- [ ] Every file has a complete, expanded summary (8-15 sentences minimum, no truncation)
+- [ ] All summaries follow the expanded structure: identification, overview, detailed changes, technical details, integration, impact
+- [ ] All summaries name ALL specific functions, classes, methods, variables, imports, exports, configs, or changes (no vague phrases)
+- [ ] Each summary includes detailed technical implementation (data flow, async behavior, error handling, validation, performance, security)
+- [ ] Each summary includes comprehensive integration points (where it's used, what it depends on, execution flow)
+- [ ] Each file summary includes a changeMagnitude assessment (minor/moderate/significant)
+- [ ] Each file summary includes a conciseSummary for the quick reference section
 - [ ] The main comment is comprehensive (300-800 words) with all required sections
-- [ ] All file summaries are included in the comment under "## File Snapshots"
+- [ ] All file summaries are included in the comment under "## File Snapshots" (detailed format)
+- [ ] A concise "## File snapshots" section (lowercase) is included with quick reference summaries
+- [ ] The concise section uses the format: "[Status]: [path] ([magnitude]) — [one-line description]"
 - [ ] The comment uses proper Markdown formatting (headers, bullets, code formatting)
-- [ ] All technical details are explained (parameters, return values, data flow, etc.)
-- [ ] Integration points are clearly described
-- [ ] Impact analysis covers capabilities, problems solved, workflows, and breaking changes
+- [ ] All technical details are explained thoroughly (parameters with types, return values with structures, data flow, algorithms, etc.)
+- [ ] Integration points are clearly described with specific file names and relationships
+- [ ] Impact analysis covers capabilities, problems solved, workflows, breaking changes, benefits, and trade-offs
 - [ ] No incomplete sentences or truncated explanations
-- [ ] The response would help a new developer understand the PR without reading code
+- [ ] The response would help a new developer understand the PR completely without reading code
+- [ ] Each file summary provides extensive context and analysis as if explaining to a new team member
 
 PR Title: ${prTitle}
 PR Number: ${prNumber}
@@ -414,39 +494,106 @@ Below are the detailed file changes with patches/diffs. For each file:
    - Are there cross-cutting concerns? (e.g., logging, error handling, authentication changes that affect multiple files)
    - What is the user/developer impact? How does this change affect the end-user experience or developer workflow?
 
-3. **Provide comprehensive, structured summaries**: When writing file summaries, follow this structure and be specific about:
+3. **Provide comprehensive, structured summaries**: When writing file summaries, follow this EXPANDED structure and be extremely specific about:
    
-   **Structure for each file summary:**
-   a. **File identification** (1-2 sentences):
-      - What type of file is this? (route handler, component, service, utility, config, migration, etc.)
-      - What is its role in the codebase? Where does it fit in the architecture?
+   **EXPANDED Structure for each file summary (8-15 sentences minimum):**
    
-   b. **Change overview** (1-2 sentences):
+   a. **File identification & context** (2-3 sentences):
+      - What type of file is this? (route handler, React component, service class, utility function, database migration, CI workflow, config file, test file, type definition, style file, etc.)
+      - What is its role in the codebase? Where does it fit in the application architecture?
+      - What layer does it belong to? (presentation layer, business logic layer, data access layer, infrastructure layer, etc.)
+      - What is the file's relationship to the overall system? (e.g., "This is a Next.js API route handler that processes authentication requests and integrates with Supabase")
+   
+   b. **Change overview & scope** (2-3 sentences):
       - What was added, modified, or removed at a high level?
-      - What is the scope of changes? (entire file new, specific functions changed, etc.)
+      - What is the scope of changes? (entire file is new, specific functions changed, entire class refactored, specific methods modified, etc.)
+      - What percentage or portion of the file changed? (if modified, not new - estimate: small change, medium change, large refactor, complete rewrite)
+      - What was the previous state? (if modified or removed, describe what existed before - what functions/classes were there, how did they work)
    
-   c. **Detailed change description** (2-4 sentences):
-      - Name ALL functions, classes, methods, variables, constants, types, interfaces that were added/modified/removed
-      - For each, explain what it does, what it accepts, what it returns
-      - For imports/exports: explain what dependencies were added/removed and why
-      - For config files: list all configuration keys, values, and their purposes
-      - For refactors: explain what was refactored, the old structure, and the new structure
+   c. **Detailed change description** (3-5 sentences - THIS IS THE MOST IMPORTANT SECTION):
+      - **Name ALL specific changes**: List EVERY function, class, method, variable, constant, type, interface, enum, import, export, configuration value, route, endpoint, component, hook, utility, prop, state variable, event handler, lifecycle hook, etc. that was added/modified/removed
+      - **For each named function/class/method**: 
+        * What does it do? (purpose and behavior)
+        * What parameters does it accept? (names, types, required/optional, default values, validation rules)
+        * What does it return? (return type, structure, meaning, possible values)
+        * What side effects does it have? (database writes, API calls, file operations, state changes, etc.)
+        * What errors can it throw? (error types, error messages, error handling)
+        * Is it async? (promises, async/await, callbacks)
+      - **For imports**: 
+        * List what libraries/modules are imported (exact package names and versions if visible)
+        * Why are they needed? (what functionality do they provide)
+        * How are they used in the code? (specific usage examples from the diff)
+        * Are they new dependencies or existing ones?
+      - **For exports**: 
+        * List what is exported from this file (functions, classes, types, constants, components, etc.)
+        * How might other files use these exports? (what API does this file provide)
+        * Are these exports new or modified?
+      - **For configuration files**: 
+        * List ALL configuration keys, their values, types, default values, purposes
+        * What effect do they have on runtime behavior? (performance, security, functionality)
+        * Are they environment-specific? (dev, staging, prod)
+        * Are they new configs or modified existing ones?
+      - **For refactors**: 
+        * Explain what was refactored (specific functions/classes/patterns/modules)
+        * Describe the old structure: how was it organized before? What were the problems or limitations?
+        * Describe the new structure: how is it organized now? What improvements were made?
+        * Why was the refactor done? (what problems does it solve - maintainability, performance, readability, testability, etc.)
+        * What benefits does it provide? (specific improvements)
+      - **For UI components**: 
+        * What does the component render? (UI elements, layout, structure)
+        * What props does it accept? (names, types, required/optional, default values, validation)
+        * What state does it manage? (state variables, their types, initial values, how they change)
+        * What lifecycle hooks does it use? (useEffect, useState, useCallback, etc. and their purposes)
+        * What event handlers does it have? (onClick, onSubmit, onChange, etc. and what they do)
+        * How do users interact with it? (user flows, interactions)
+        * What styling does it use? (CSS classes, inline styles, CSS-in-JS, etc.)
+      - **For API endpoints/routes**: 
+        * HTTP method (GET, POST, PUT, DELETE, PATCH, etc.)
+        * Path/route (exact URL pattern)
+        * Request body structure (fields, types, validation rules, required/optional fields)
+        * Response structure (status codes, body format, error responses)
+        * Authentication/authorization requirements (who can access this, what permissions are needed)
+        * Error responses (what errors can occur, what status codes, what error messages)
+        * Use cases (when is this endpoint called, what does it accomplish)
+      - **For hooks**: 
+        * What state/behavior do they manage? (what do they track, what do they control)
+        * What do they return? (structure, types, values)
+        * When are they used? (in what components, under what conditions)
+        * What dependencies do they have? (what values trigger re-runs, what external dependencies)
+        * What side effects do they cause? (API calls, subscriptions, DOM updates, etc.)
+      - **For services/utilities**: 
+        * What problems do they solve? (specific use cases)
+        * What operations do they perform? (data transformations, calculations, validations, etc.)
+        * What algorithms or patterns do they use? (sorting, filtering, caching, memoization, etc.)
+        * How are they used across the codebase? (which files import and use them)
    
-   d. **Technical implementation** (1-2 sentences):
-      - How does it work? What algorithms, patterns, or techniques are used?
-      - What are the key technical details? (data structures, async operations, error handling, validation, etc.)
-      - What libraries or frameworks are used?
+   d. **Technical implementation details** (2-3 sentences):
+      - **How does it work?** Explain the implementation approach, algorithms, patterns, or techniques used
+      - **Data flow**: How does data move through the functions? What transformations occur? What state changes happen? What is the complete execution path from input to output?
+      - **Async behavior**: Are there async operations? How are promises/async-await handled? What is the concurrency model? Are there race conditions to consider?
+      - **Error handling**: What errors can occur? How are they caught and handled? What error messages are returned? What logging is performed? Are errors propagated or swallowed?
+      - **Validation**: What input validation is performed? What validation rules exist? What happens when validation fails? Are validation errors user-friendly?
+      - **Performance**: Are there any performance considerations? (caching strategies, memoization, optimization techniques, potential bottlenecks, memory usage, CPU usage)
+      - **Security**: Are there any security considerations? (authentication mechanisms, authorization checks, input sanitization, SQL injection prevention, XSS prevention, CSRF protection, rate limiting, etc.)
+      - **Dependencies**: What libraries or frameworks are used? Why were they chosen? How are they integrated? Are there version constraints?
+      - **Testing**: Are there tests? What do they cover? What testing approach is used? (unit tests, integration tests, etc.)
    
-   e. **Integration and usage** (1-2 sentences):
-      - Where is this file used? What other files import or depend on it?
-      - What files does this file depend on? What imports does it have?
-      - How is it called/invoked? (API endpoints, event handlers, scheduled jobs, etc.)
-      - What part of the application flow does it participate in?
+   e. **Integration points & relationships** (2-3 sentences):
+      - **Where is this file used?** List SPECIFIC files that import or depend on this file, and explain HOW they use it (what functions they call, what props they pass, etc.)
+      - **What does this file depend on?** List SPECIFIC files this file imports, and explain what functionality it gets from them (what functions it calls, what types it uses, etc.)
+      - **How is it called/invoked?** (API endpoints trigger it, event handlers call it, scheduled jobs run it, React components render it, hooks use it, etc.)
+      - **What part of the application flow does it participate in?** Explain the COMPLETE execution path: what triggers it (user action, API request, scheduled job, event, etc.), what happens during execution (step-by-step flow), what happens after (what is the result, what is the next step)
+      - **Are there any cross-cutting concerns?** (logging, error handling, authentication, authorization, caching, monitoring, etc.) - explain how this file participates in these
+      - **How does it affect the overall architecture?** Does it introduce new patterns? Does it change existing patterns? Does it affect other parts of the system?
+      - **What are the dependencies and dependents?** Create a clear picture of how this file fits into the dependency graph
    
-   f. **Impact and purpose** (1 sentence):
-      - Why does this change matter? What problem does it solve?
-      - What new capability does it add? What behavior does it change?
-      - What are the benefits or improvements?
+   f. **Impact, purpose & benefits** (1-2 sentences):
+      - **Why does this change matter?** What problem does it solve? What issue or limitation does it address? What was the motivation?
+      - **What new capability does it add?** What can users/developers do now that they couldn't before? What functionality is enabled?
+      - **What behavior does it change?** How does the new behavior differ from the old? What workflows are affected? What user experiences change?
+      - **What are the benefits?** (improved performance, better maintainability, enhanced security, better user experience, reduced complexity, increased testability, etc.) - be specific
+      - **Are there any trade-offs?** (increased complexity, additional dependencies, breaking changes, migration effort, performance costs, etc.) - be honest about any downsides
+      - **What is the business value?** (if applicable - does it enable new features, improve reliability, reduce costs, etc.)
    
    **NEVER use vague phrases** like:
    - "introduces new logic" (explain WHAT logic)

@@ -305,11 +305,43 @@ function renderFileSummariesSection(summaries: GeminiFileSummary[]) {
     return ''
   }
 
-  const lines = summaries.map(
-    (summary) => `- ${summary.summary || `${summary.status?.toUpperCase()} \`${summary.path}\``}`
-  )
+  const lines = summaries.map((summary) => {
+    const status = summary.status || 'modified'
+    const prefix = status === 'added' ? 'Added' : status === 'removed' ? 'Removed' : status === 'renamed' ? 'Renamed' : 'Updated'
+    
+    // Use conciseSummary if available, otherwise fall back to generating one from summary
+    let description = summary.conciseSummary || ''
+    
+    // If no conciseSummary, try to extract key info from the full summary
+    if (!description && summary.summary) {
+      // Try to find key imports, functions, or changes mentioned in the summary
+      const importMatch = summary.summary.match(/import(?:s|ed)?\s+(?:{([^}]+)}|[\w]+)\s+from\s+['"]([^'"]+)['"]/i)
+      const functionMatch = summary.summary.match(/(?:added|created|introduced|modified)\s+(?:a\s+)?(?:new\s+)?(?:function|method|class|component|hook|utility)\s+([\w]+)/i)
+      
+      if (importMatch) {
+        const imports = importMatch[1] || importMatch[0]
+        const from = importMatch[2] || ''
+        description = `Imported ${imports}${from ? ` from ${from}` : ''}`
+      } else if (functionMatch) {
+        description = `Added ${functionMatch[1]}`
+      } else {
+        // Fallback: use first sentence or key phrase
+        const firstSentence = summary.summary.split('.')[0]
+        if (firstSentence.length < 100) {
+          description = firstSentence
+        } else {
+          description = 'Modified implementation'
+        }
+      }
+    }
+    
+    // Add change magnitude if available
+    const magnitude = summary.changeMagnitude ? ` (${summary.changeMagnitude} change)` : ''
+    
+    return `${prefix}: ${summary.path}${magnitude}${description ? ` — ${description}` : ''}`
+  })
 
-  return `\n\n### File snapshots\n${lines.join('\n')}`
+  return `\n\n## File snapshots\n${lines.join('\n')}`
 }
 
 /**
