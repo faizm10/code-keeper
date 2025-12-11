@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Loader2, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
@@ -9,11 +8,11 @@ import { toast } from 'sonner'
 interface AnalyzeRepoButtonProps {
   owner: string
   repo: string
+  onAnalyzeComplete?: () => void
 }
 
-export function AnalyzeRepoButton({ owner, repo }: AnalyzeRepoButtonProps) {
+export function AnalyzeRepoButton({ owner, repo, onAnalyzeComplete }: AnalyzeRepoButtonProps) {
   const [analyzing, setAnalyzing] = useState(false)
-  const router = useRouter()
 
   const handleAnalyze = async () => {
     try {
@@ -32,11 +31,13 @@ export function AnalyzeRepoButton({ owner, repo }: AnalyzeRepoButtonProps) {
 
       const data = await response.json()
       toast.success('Repository analyzed successfully!', {
-        description: `Found ${data.stats.docs.count} documentation files and ${data.stats.files.total} total files`,
+        description: `Found ${data.stats.docs.count} documentation files and ${data.stats.files.total.toLocaleString()} total files`,
       })
       
-      // Refresh the page to show updated analysis
-      router.refresh()
+      // Notify parent component to refresh
+      if (onAnalyzeComplete) {
+        onAnalyzeComplete()
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to analyze repository')
     } finally {
