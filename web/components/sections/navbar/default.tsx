@@ -13,6 +13,7 @@ import {
 } from "../../ui/navbar";
 import Navigation from "../../ui/navigation";
 import { Sheet, SheetContent, SheetTrigger } from "../../ui/sheet";
+import { AnimatedThemeToggler } from "../../ui/animated-theme-toggler";
 
 interface NavbarLink {
   text: string;
@@ -100,6 +101,7 @@ export default function Navbar({
                 </a>
               ),
             )}
+            <AnimatedThemeToggler />
             <Sheet>
               <SheetTrigger asChild>
                 <Button

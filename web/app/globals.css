@@ -5,6 +5,15 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* View Transitions API support for theme switching */
+@supports (view-transition-name: none) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 0.5s;
+    animation-timing-function: ease-in-out;
+  }
+}
+
 @theme inline {
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
@@ -218,5 +227,23 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* View Transitions API support for animated theme switching */
+@supports (view-transition-name: none) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 0.5s;
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    mix-blend-mode: normal;
+  }
+  
+  ::view-transition-old(root) {
+    z-index: 1;
+  }
+  
+  ::view-transition-new(root) {
+    z-index: 2;
   }
 }

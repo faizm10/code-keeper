@@ -9,7 +9,7 @@ import {
   FooterColumn,
   FooterContent,
 } from "../../ui/footer";
-import { ModeToggle } from "../../ui/mode-toggle";
+import { AnimatedThemeToggler } from "../../ui/animated-theme-toggler";
 
 interface FooterLink {
   text: string;
@@ -101,7 +101,7 @@ export default function FooterSection({
                   {policy.text}
                 </a>
               ))}
-              {showModeToggle && <ModeToggle />}
+              {showModeToggle && <AnimatedThemeToggler variant="ghost" size="sm" />}
             </div>
           </FooterBottom>
         </Footer>
