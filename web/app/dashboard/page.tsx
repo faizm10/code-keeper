@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { RepositoryOnboarding } from '@/components/dashboard/repository-onboarding'
 import { hasGitHubConnection } from '@/lib/github/auth'
 
@@ -45,7 +46,10 @@ export default async function DashboardPage() {
         </div>
 
         <div className="bg-card border border-border rounded-lg p-6">
-          <h2 className="text-xl font-semibold mb-2">Snippets</h2>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-xl font-semibold">Snippets</h2>
+            <Badge variant="secondary" size="sm">Coming Soon</Badge>
+          </div>
           <p className="text-muted-foreground mb-4">
             Save and organize your code snippets.
           </p>
