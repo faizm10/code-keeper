@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card"
 import { ArrowRight, Code2, FileText, GitPullRequest, Shield, Sparkles, CheckCircle2, Github } from "lucide-react"
 import { redirect } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 
 type HomeSearchParams = {
   code?: string
@@ -338,7 +339,21 @@ export default async function HomePage({ searchParams }: HomeProps) {
           <div className="text-center mb-12">
             <p className="text-sm text-muted-foreground uppercase tracking-wider mb-4">Trusted by development teams</p>
             <div className="flex items-center justify-center gap-8 flex-wrap opacity-60">
-              <span className="text-2xl font-semibold">uoguelph.courses</span>
+              <a
+                href="https://uoguelph.courses/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 hover:opacity-100 transition-opacity duration-200"
+              >
+                <Image
+                  src="/Test3.png"
+                  alt="uoguelph.courses logo"
+                  width={120}
+                  height={60}
+                  className="max-h-12 md:max-h-16 w-auto object-contain"
+                />
+                <span className="text-2xl font-semibold">uoguelph.courses</span>
+              </a>
             </div>
           </div>
         </div>
