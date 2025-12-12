@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { ArrowRight, Code2, FileText, GitPullRequest, Shield, Sparkles, CheckCircle2, Github } from "lucide-react"
 import { redirect } from "next/navigation"
+import Link from "next/link"
 
 type HomeSearchParams = {
   code?: string
@@ -81,9 +82,11 @@ export default async function HomePage({ searchParams }: HomeProps) {
               analysis. Focus on building features while Code Keeper handles maintenance.
             </p>
             <div className="flex items-center justify-center gap-4 flex-wrap">
-              <Button size="lg" className="h-12 px-8">
-                <Github className="mr-2 h-5 w-5" />
-                Connect GitHub
+              <Button size="lg" className="h-12 px-8" asChild>
+                <Link href="/auth/login">
+                  <Github className="mr-2 h-5 w-5" />
+                  Connect GitHub
+                </Link>
               </Button>
               <Button size="lg" variant="outline" className="h-12 px-8 bg-transparent">
                 View Demo
@@ -350,9 +353,11 @@ export default async function HomePage({ searchParams }: HomeProps) {
             your GitHub account.
           </p>
           <div className="flex items-center justify-center gap-4 flex-wrap">
-            <Button size="lg" variant="secondary" className="h-12 px-8">
-              <Github className="mr-2 h-5 w-5" />
-              Get Started Free
+            <Button size="lg" variant="secondary" className="h-12 px-8" asChild>
+              <Link href="/auth/login">
+                <Github className="mr-2 h-5 w-5" />
+                Get Started Free
+              </Link>
             </Button>
             <Button
               size="lg"
