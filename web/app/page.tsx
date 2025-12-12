@@ -2,8 +2,34 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { ArrowRight, Code2, FileText, GitPullRequest, Shield, Sparkles, CheckCircle2, Github } from "lucide-react"
+import { redirect } from "next/navigation"
 
-export default function HomePage() {
+type HomeSearchParams = {
+  code?: string
+  state?: string
+  next?: string
+}
+
+type HomeProps = {
+  searchParams: Promise<HomeSearchParams>
+}
+
+export default async function HomePage({ searchParams }: HomeProps) {
+  const params = await searchParams
+
+  // Handle OAuth callback - redirect to auth/callback if code parameter is present
+  if (params?.code) {
+    const query = new URLSearchParams()
+    query.set("code", params.code)
+    if (params.state) {
+      query.set("state", params.state)
+    }
+    if (params.next) {
+      query.set("next", params.next)
+    }
+    redirect(`/auth/callback?${query.toString()}`)
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
