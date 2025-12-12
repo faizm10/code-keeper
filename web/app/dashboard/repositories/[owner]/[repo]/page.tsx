@@ -285,26 +285,26 @@ export default async function RepositoryDetailsPage({
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-      <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-6">
         {/* Header Section */}
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <Button variant="ghost" asChild className="px-0 text-muted-foreground hover:text-foreground">
-            <Link href="/dashboard/repositories">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to repositories
-            </Link>
-          </Button>
-          {repository && (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <Button variant="ghost" asChild className="px-0 text-muted-foreground hover:text-foreground">
+                <Link href="/dashboard/repositories">
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back to repositories
+                </Link>
+              </Button>
+              {repository && (
+                <div className="flex flex-wrap gap-2">
               <Badge variant={repository.private ? 'secondary' : 'outline'} className="text-xs">
-                {repository.private ? 'Private' : 'Public'}
-              </Badge>
-              {repository.language && (
+                    {repository.private ? 'Private' : 'Public'}
+                  </Badge>
+                  {repository.language && (
                 <Badge variant="outline" className="text-xs">{repository.language}</Badge>
+                  )}
+                </div>
               )}
             </div>
-          )}
-        </div>
 
             {errorMessage ? (
               <div className="space-y-6 rounded-lg border border-destructive/40 bg-destructive/5 p-6 text-sm">
@@ -336,16 +336,16 @@ export default async function RepositoryDetailsPage({
                 <Card className="border-border/60 bg-card/50 backdrop-blur-sm">
                   <CardContent className="pt-6">
                     <div className="flex flex-col gap-6">
-                      <div>
+                  <div>
                         <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
-                          Repository
-                        </p>
+                      Repository
+                    </p>
                         <h1 className="text-3xl font-bold mb-3">{repository.fullName}</h1>
-                        {repository.description && (
+                  {repository.description && (
                           <p className="text-base text-muted-foreground leading-relaxed max-w-3xl">
                             {repository.description}
                           </p>
-                        )}
+                  )}
                       </div>
                       
                       <div className="flex flex-wrap items-center gap-4 text-sm">
@@ -358,17 +358,17 @@ export default async function RepositoryDetailsPage({
                           <span className="font-medium">Last push:</span>
                           <span>{formatDate(repository.pushedAt)}</span>
                         </div>
-                      </div>
+                  </div>
 
-                      <div className="flex flex-wrap gap-3">
+                  <div className="flex flex-wrap gap-3">
                         <AnalyzeRepoButton owner={owner} repo={repo} />
                         <Button asChild variant="outline">
                           <a href={repository.htmlUrl} target="_blank" rel="noreferrer">
-                            View on GitHub
+                        View on GitHub
                           </a>
-                        </Button>
-                      </div>
-                    </div>
+                    </Button>
+                  </div>
+                </div>
                   </CardContent>
                 </Card>
 
@@ -389,7 +389,7 @@ export default async function RepositoryDetailsPage({
                               {label}
                             </p>
                             <p className="text-2xl font-bold truncate">{value.toLocaleString()}</p>
-                          </div>
+                        </div>
                         </div>
                       </CardContent>
                     </Card>
@@ -419,7 +419,7 @@ export default async function RepositoryDetailsPage({
                       <div className="grid gap-6 md:grid-cols-2">
                         {/* Repository Details Card */}
                         <Card className="border-border/60 bg-card/50 backdrop-blur-sm">
-                          <CardContent className="pt-6">
+                        <CardContent className="pt-6">
                             <h2 className="text-lg font-semibold mb-6">Repository Details</h2>
                             <div className="space-y-4">
                               <div className="flex items-center justify-between py-2 border-b border-border/50">
@@ -427,19 +427,19 @@ export default async function RepositoryDetailsPage({
                                 <Badge variant="outline" className="font-mono text-xs">
                                   {repository.defaultBranch}
                                 </Badge>
-                              </div>
+                                </div>
                               <div className="flex items-center justify-between py-2 border-b border-border/50">
                                 <span className="text-sm text-muted-foreground">Visibility</span>
                                 <Badge variant={repository.private ? 'secondary' : 'outline'} className="text-xs">
-                                  {repository.private ? 'Private' : 'Public'}
-                                </Badge>
-                              </div>
-                              {repository.language && (
+                                    {repository.private ? 'Private' : 'Public'}
+                                  </Badge>
+                                </div>
+                                {repository.language && (
                                 <div className="flex items-center justify-between py-2">
                                   <span className="text-sm text-muted-foreground">Primary Language</span>
                                   <Badge variant="outline" className="text-xs">{repository.language}</Badge>
-                                </div>
-                              )}
+                                  </div>
+                                )}
                             </div>
                           </CardContent>
                         </Card>
@@ -476,11 +476,11 @@ export default async function RepositoryDetailsPage({
                                   <span className="font-semibold">
                                     {pullRequests.filter(pr => pr.state === 'closed' && !pr.mergedAt).length}
                                   </span>
-                                </div>
                               </div>
                             </div>
-                          </CardContent>
-                        </Card>
+                          </div>
+                        </CardContent>
+                      </Card>
                       </div>
                     )}
                   </TabsContent>
@@ -500,18 +500,18 @@ export default async function RepositoryDetailsPage({
                   <TabsContent value="analyze">
                     <RepoAnalysis owner={owner} repo={repo} />
                   </TabsContent>
-                </Tabs>
+                       </Tabs>
 
-                {/* PR Checks Table */}
-                <div className="mt-8">
-                  <PRChecksTable owner={owner} repo={repo} />
-                </div>
-              </>
-            ) : null}
-          </div>
-        </div>
-      )
-    }
+                       {/* PR Checks Table */}
+                       <div className="mt-8">
+                         <PRChecksTable owner={owner} repo={repo} />
+                       </div>
+                     </>
+                   ) : null}
+                 </div>
+           </div>
+         )
+       }
 
 
 

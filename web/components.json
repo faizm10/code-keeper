@@ -21,6 +21,7 @@
   "registries": {
     "@supabase": "https://supabase.com/ui/r/{name}.json",
     "@magicui": "https://magicui.design/r/{name}.json",
-    "@kokonutui": "https://kokonutui.com/r/{name}.json"
+    "@kokonutui": "https://kokonutui.com/r/{name}.json",
+    "@animate-ui": "https://animate-ui.com/r/{name}.json"
   }
 }

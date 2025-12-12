@@ -54,7 +54,7 @@ export function LogoWall({
                 className="max-h-12 md:max-h-16 w-auto object-contain"
               />
             )
-
+            
             return (
               <div
                 key={index}

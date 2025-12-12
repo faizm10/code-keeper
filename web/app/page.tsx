@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowRightIcon } from "lucide-react";
 import Github from "@/components/logos/github";
 import { redirect } from "next/navigation";
-import { LogoWall } from "@/components/sections/logo-wall";
+import TrustedBy from "@/components/sections/trusted-by";
 import { NewsletterSignup } from "@/components/newsletter-signup";
 import { CodeKeeperBentoGrid } from "@/components/code-keeper-bento-grid";
 
@@ -73,33 +73,10 @@ export default async function Home({ searchParams }: HomeProps) {
         }
       />
 
-      {/* Logo Wall Section */}
-      <LogoWall 
-        organizations={[
-          {
-            name: "uoguelph.course",
-            logo: "/Test3.png",
-            alt: "uoguelph.course logo",
-            width: 120,
-            height: 60,
-            href: "https://uoguelph.courses/"
-          }
-        ]} 
-      />
+      {/* Trusted By Section */}
+      {/* <TrustedBy /> */}
 
-      {/* What It Does Section */}
-      <section className="py-32 bg-muted/30">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-20">
-            <h2 className="text-4xl font-bold mb-6 tracking-tight">How It Works</h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Every push triggers intelligent automation that keeps your project maintainable and well-documented
-            </p>
-          </div>
-          
-          <CodeKeeperBentoGrid />
-        </div>
-      </section>
+      
 
       {/* Why Section */}
       <section className="py-32">
@@ -163,7 +140,7 @@ export default async function Home({ searchParams }: HomeProps) {
                 Get notified about new features, updates, and best practices for automated code maintenance
               </p>
             </div>
-            
+
             <NewsletterSignup />
             
             <div className="mt-8 text-center">
