@@ -672,7 +672,31 @@ export async function POST(
       effectiveFileSummaries = buildFallbackFileSummaries(files)
     }
 
-    // 5. Generate the final comment using Gemini when available
+    // 5. If documentation gaps detected, trigger README suggestions worker (async, don't wait)
+    if (geminiAnalysis && (geminiAnalysis.missingDocs.length > 0 || geminiAnalysis.shouldWarn)) {
+      // Trigger README suggestions worker asynchronously
+      // Use internal API call - the worker will use the same user session
+      const readmeSuggestionsUrl = new URL(
+        `/api/repositories/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/prs/${prNumber}/readme-suggestions`,
+        request.url
+      ).toString()
+      
+      // Fire and forget - don't wait for response
+      // The worker will authenticate using the same Supabase session
+      fetch(readmeSuggestionsUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // Pass cookies for session authentication
+          Cookie: request.headers.get('cookie') || '',
+        },
+      }).catch((error) => {
+        console.error('Failed to trigger README suggestions worker:', error)
+        // Don't throw - this is a background task
+      })
+    }
+
+    // 6. Generate the final comment using Gemini when available
     let commentBody: string | null = null
     let skipReason = 'Docs-only PR, no comment posted'
 
@@ -752,7 +776,7 @@ ${renderFileSummariesSection(effectiveFileSummaries)}
       })
     }
 
-    // 6. Always create a fresh comment to avoid overwriting previous context
+    // 7. Always create a fresh comment to avoid overwriting previous context
     let commentId: number | null = null
       const createResponse = await fetch(
         `https://api.github.com/repos/${owner}/${repo}/issues/${prNumber}/comments`,
