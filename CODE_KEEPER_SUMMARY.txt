@@ -1,0 +1,166 @@
+CODE KEEPER - APPLICATION SUMMARY FOR LANDING PAGE DESIGN
+================================================================
+
+PRODUCT OVERVIEW
+----------------
+Code Keeper is an AI-powered automated code maintenance platform that helps development teams keep their repositories well-documented, architecturally consistent, and maintainable. It acts as an intelligent autonomous agent that monitors GitHub repositories and provides contextual feedback on pull requests, ensuring documentation stays synchronized with code changes automatically.
+
+CORE PROBLEM IT SOLVES
+----------------------
+Development teams struggle with:
+- Documentation that becomes outdated as code evolves
+- Inconsistent folder structures across codebases
+- Refactoring tasks that never get prioritized
+- Changelogs and release notes that fall behind
+- Architecture that drifts from original design
+- New developers who can't quickly understand PR changes
+- Technical debt that accumulates silently
+
+Code Keeper prevents these problems from happening in the first place by automatically maintaining alignment between code, documentation, and architecture.
+
+KEY FEATURES
+------------
+1. AUTOMATED PULL REQUEST ANALYSIS
+   - AI-powered analysis of every PR using Google Gemini 2.5 Flash
+   - Detects meaningful changes: new endpoints, functions, database schema changes, infrastructure updates
+   - Identifies documentation gaps and suggests updates
+   - Generates human-friendly, context-aware comments on PRs
+   - Provides detailed file-by-file summaries written for new developers
+
+2. INTELLIGENT DOCUMENTATION TRACKING
+   - Monitors documentation files (README, API docs, changelogs)
+   - Maps code changes to documentation obligations
+   - Detects when docs need updates based on code changes
+   - Provides positive feedback when docs are updated correctly
+   - Gentle reminders when documentation updates are missing
+
+3. REPOSITORY HEALTH MONITORING
+   - Scans entire repositories to understand structure
+   - Tracks documentation coverage
+   - Monitors file types and extensions
+   - Analyzes repository activity and commit history
+
+4. GITHUB INTEGRATION
+   - Full GitHub OAuth authentication
+   - Webhook support for real-time PR monitoring
+   - Repository browsing and exploration
+   - Pull request management and tracking
+
+5. MODERN DASHBOARD
+   - Clean web interface built with Next.js 16 and React 19
+   - Repository management and onboarding
+   - PR run history and tracking
+   - Settings and account management
+
+HOW IT WORKS (THE AI INTELLIGENCE)
+-----------------------------------
+Code Keeper uses Google's Gemini 2.5 Flash AI model to understand code changes contextually, not just through pattern matching:
+
+1. When a PR is opened, Code Keeper analyzes:
+   - All changed files with full patch/diff content
+   - File classifications (code, docs, infrastructure, database, CI)
+   - Repository structure and zones
+
+2. The AI detects meaningful events:
+   - NewEndpointAdded - New API endpoints
+   - NewPublicFunction - New exported functions/classes
+   - DbSchemaChanged - Database schema modifications
+   - DockerfileChanged - Infrastructure changes
+   - NewEnvVar - New environment variables
+   - WorkflowChanged - CI/CD pipeline changes
+
+3. Maps events to documentation obligations:
+   - API documentation updates
+   - Database/schema documentation
+   - Setup/environment documentation
+   - Changelog entries
+   - Infrastructure/runbook documentation
+
+4. Generates intelligent PR comments:
+   - Explains changes in developer-friendly language
+   - Describes where things live and how they're called
+   - Highlights important details (parameters, return values, impacts)
+   - Provides a "tour" of the PR for new team members
+   - Adapts tone based on whether docs were updated
+
+TARGET AUDIENCE
+---------------
+- Development teams managing large codebases
+- Open source projects needing high-quality documentation
+- Teams onboarding new developers frequently
+- Engineering teams wanting to reduce technical debt
+- Organizations needing to maintain documentation compliance
+
+KEY VALUE PROPOSITIONS
+----------------------
+1. "Automatically updates docs after every PR" - No more forgotten documentation updates
+2. "Focus on building features while Code Keeper handles maintenance" - Frees developers from maintenance chores
+3. "Intelligent feedback that reads like it's from a helpful senior engineer" - Not robotic, genuinely helpful
+4. "Prevents technical debt from accumulating" - Catches issues before they become problems
+5. "Helps new developers understand changes quickly" - Onboarding-friendly PR summaries
+
+KEY DIFFERENTIATORS
+-------------------
+1. Intelligence Over Rules: Uses AI to understand context and intent, not just pattern matching
+2. Developer-Friendly: Comments read like they're from a helpful teammate, not a bot
+3. Comprehensive: Analyzes entire PRs holistically, not just individual files
+4. Context-Aware: Understands repository structure, zones, and documentation patterns
+5. Proactive: Suggests documentation updates before they're forgotten
+6. Educational: Helps new developers understand changes quickly
+7. Safe by Default: Never commits directly to main - all changes are proposed through pull requests
+
+TECHNICAL STACK
+---------------
+- Frontend: Next.js 16, React 19, TypeScript, Tailwind CSS
+- AI/LLM: Google Gemini 2.5 Flash
+- Database: Supabase (PostgreSQL)
+- Authentication: Supabase Auth + GitHub OAuth
+- Infrastructure: Docker, Docker Compose
+
+CURRENT LANDING PAGE ELEMENTS
+------------------------------
+- Hero section: "Automated Code Maintenance for Modern Teams"
+- Badge: "✨ Automatically updates docs after every PR"
+- Bento grid showing 6 features:
+  * Detect Changes
+  * Update Documentation
+  * Safe Refactoring
+  * Test Validation
+  * Pull Request Generation
+  * Safe by Default
+- Problem/Solution section showing common problems vs. Code Keeper solution
+- Newsletter signup section
+- Trusted by section (currently showing uoguelph.courses)
+
+TONE & MESSAGING
+----------------
+- Professional but approachable
+- Developer-focused language
+- Emphasizes automation and intelligence
+- Highlights time-saving and maintenance reduction
+- Focuses on preventing problems rather than fixing them
+- Supportive and helpful, not critical or robotic
+
+CALL-TO-ACTION FOCUS
+--------------------
+Primary: "Get Started" - Sign up and connect GitHub
+Secondary: "Sign In" - For existing users
+Value: Free trial, easy GitHub integration, no credit card required
+
+USE CASES TO HIGHLIGHT
+----------------------
+1. Teams keeping documentation in sync across large codebases
+2. Open source projects maintaining high-quality documentation
+3. Onboarding new team members quickly
+4. Providing additional context for code reviewers
+5. Catching documentation drift early
+
+VISUAL DIRECTION
+----------------
+- Modern, clean design
+- Developer-focused aesthetic
+- Dashboard previews showing repository management
+- Code/documentation visualization
+- GitHub integration visuals
+- AI intelligence indicators
+
