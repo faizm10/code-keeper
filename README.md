@@ -5,15 +5,11 @@ Code Keeper is a full-stack app that helps you store and explore code repos, sni
 
 ## Features
 
-## Features
-
 *   **Centralized Code Management**: Store and explore all your code repositories, snippets, and documentation in one place.
 *   **AI-Powered README Suggestions**: Get automated, user-focused recommendations to improve your project READMEs, ensuring new users can quickly understand your work.
 
 
 ## Getting Started
-
-## Configuration
 
 ## Configuration
 
