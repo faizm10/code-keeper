@@ -13,17 +13,18 @@ export type PRFileForGemini = {
 }
 
 export type GeminiPRAnalysis = {
-  zones: RepoZone[]
-  events: string[]
-  obligations: string[]
-  docsTouched: boolean
-  docFilesTouched: string[]
-  missingDocs: string[]
-  shouldWarn: boolean
-  reasoning: string
-  summary: string
-  comment: string
-  fileSummaries: Array<{
+  // Legacy fields (for backward compatibility)
+  zones?: RepoZone[]
+  events?: string[]
+  obligations?: string[]
+  docsTouched?: boolean
+  docFilesTouched?: string[]
+  missingDocs?: string[]
+  shouldWarn?: boolean
+  reasoning?: string
+  summary?: string
+  comment?: string
+  fileSummaries?: Array<{
     path: string
     status?: 'added' | 'modified' | 'removed' | 'renamed'
     changeMagnitude?: 'minor' | 'moderate' | 'significant'
@@ -32,6 +33,93 @@ export type GeminiPRAnalysis = {
   }>
   tone?: string
   confidence?: 'high' | 'medium' | 'low'
+  
+  // New comprehensive structure
+  executiveSummary?: string
+  category?: 'feature' | 'refactor' | 'bugfix' | 'performance' | 'security' | 'infrastructure' | 'chore'
+  whatChanged?: {
+    headline: string
+    details: string[]
+  }
+  technicalApproach?: {
+    overview: string
+    designPatterns: string[]
+    libraries: Array<{
+      name: string
+      version?: string
+      purpose: string
+    }>
+    architecture?: string
+  }
+  implementationDetails?: {
+    configuration: string[]
+    dataFlow: string
+    entryPoints: string[]
+    integration: string[]
+    storage: string[]
+  }
+  fileBreakdown?: Array<{
+    path: string
+    purpose: string
+    keyComponents: string[]
+    complexity: 'low' | 'medium' | 'high' | 'very-high'
+    importance: 'low' | 'medium' | 'high' | 'critical'
+  }>
+  keyInsights?: string[]
+  developerImpact?: {
+    newAPIs: Array<{
+      name: string
+      location: string
+      usage: string
+      description: string
+    }>
+    breakingChanges?: string[]
+    migrationSteps?: string[]
+  }
+  setupRequirements?: {
+    environmentVariables: Array<{
+      name: string
+      required: boolean
+      default?: string
+      description: string
+    }>
+    dependencies?: string[]
+    infrastructure?: string[]
+    commands?: string[]
+  }
+  qualityAssessment?: {
+    strengths: string[]
+    concerns: string[]
+    testCoverage: {
+      status: 'excellent' | 'good' | 'partial' | 'minimal' | 'none'
+      details: string
+    }
+    security: {
+      considerations: string[]
+      risks: string[]
+    }
+  }
+  documentation?: {
+    docsUpdated: boolean
+    quality: 'excellent' | 'good' | 'adequate' | 'poor' | 'missing'
+    suggestions: string[]
+    inlineComments?: string
+  }
+  recommendations?: {
+    beforeMerge: string[]
+    afterMerge: string[]
+    teamCommunication: string[]
+  }
+  prComment?: {
+    tone: 'positive' | 'neutral' | 'concerned'
+    message: string
+  }
+  metadata?: {
+    confidence: 'high' | 'medium' | 'low'
+    complexity: 'low' | 'medium' | 'high' | 'very-high'
+    impactScope: 'isolated' | 'moderate' | 'widespread' | 'critical'
+    estimatedReviewTime?: string
+  }
 }
 
 type PromptOptions = {
@@ -246,6 +334,7 @@ export async function analyzePullRequestWithGemini(
   const parsed = extractJsonResponse(text) as Partial<GeminiPRAnalysis>
 
   return {
+    // Legacy fields (for backward compatibility)
     zones: parsed.zones ?? [],
     events: parsed.events ?? [],
     obligations: parsed.obligations ?? [],
@@ -259,6 +348,21 @@ export async function analyzePullRequestWithGemini(
     fileSummaries: parsed.fileSummaries ?? [],
     tone: parsed.tone,
     confidence: parsed.confidence,
+    // New comprehensive structure
+    executiveSummary: parsed.executiveSummary,
+    category: parsed.category,
+    whatChanged: parsed.whatChanged,
+    technicalApproach: parsed.technicalApproach,
+    implementationDetails: parsed.implementationDetails,
+    fileBreakdown: parsed.fileBreakdown,
+    keyInsights: parsed.keyInsights,
+    developerImpact: parsed.developerImpact,
+    setupRequirements: parsed.setupRequirements,
+    qualityAssessment: parsed.qualityAssessment,
+    documentation: parsed.documentation,
+    recommendations: parsed.recommendations,
+    prComment: parsed.prComment,
+    metadata: parsed.metadata,
   }
 }
 
