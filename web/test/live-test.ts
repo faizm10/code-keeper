@@ -19,14 +19,29 @@ import { generateReadmeSuggestions } from '@/lib/gemini/readme-suggestions'
 import { classifyFile } from '@/lib/pr/file-classification'
 
 // Load environment variables from .env files
-// Try .env.local first (highest priority), then .env
+// Try multiple locations: web/.env.local, web/.env, root/.env.local, root/.env
+const currentDir = process.cwd()
+const isInWebDir = currentDir.endsWith('/web') || currentDir.endsWith('\\web')
+const webDir = isInWebDir ? currentDir : resolve(currentDir, 'web')
+const rootDir = isInWebDir ? resolve(currentDir, '..') : currentDir
+
 const envPaths = [
-  resolve(process.cwd(), '.env.local'),
-  resolve(process.cwd(), '.env'),
+  resolve(webDir, '.env.local'),
+  resolve(webDir, '.env'),
+  resolve(rootDir, '.env.local'),
+  resolve(rootDir, '.env'),
 ]
 
+// Load each .env file (later ones override earlier ones)
+// Note: override: false means don't override existing env vars, but load new ones
 for (const envPath of envPaths) {
-  config({ path: envPath })
+  try {
+    const result = config({ path: envPath, override: false })
+    // Values are automatically loaded into process.env
+    // result.parsed contains the loaded variables
+  } catch (error) {
+    // File doesn't exist or can't be read, that's okay - continue
+  }
 }
 
 type GitHubPRFile = {
@@ -323,7 +338,7 @@ async function main() {
     let token: string | null = null
     
     // Check for token in .env file or environment variable
-    // Try common variable names
+    // Try common variable names (in order of preference)
     token = process.env.GITHUB_TOKEN || 
             process.env.GH_TOKEN || 
             process.env.GITHUB_ACCESS_TOKEN ||
@@ -331,12 +346,44 @@ async function main() {
             null
     
     if (token) {
-      const source = process.env.GITHUB_TOKEN ? '.env file or GITHUB_TOKEN variable' :
-                     process.env.GH_TOKEN ? '.env file or GH_TOKEN variable' :
-                     process.env.GITHUB_ACCESS_TOKEN ? '.env file or GITHUB_ACCESS_TOKEN variable' :
-                     '.env file or GH_ACCESS_TOKEN variable'
-      console.log(`✅ Using GitHub token from ${source}\n`)
+      // Determine which variable was used
+      let varName = 'GITHUB_TOKEN'
+      if (process.env.GH_TOKEN && !process.env.GITHUB_TOKEN) varName = 'GH_TOKEN'
+      else if (process.env.GITHUB_ACCESS_TOKEN && !process.env.GITHUB_TOKEN && !process.env.GH_TOKEN) varName = 'GITHUB_ACCESS_TOKEN'
+      else if (process.env.GH_ACCESS_TOKEN && !process.env.GITHUB_TOKEN && !process.env.GH_TOKEN && !process.env.GITHUB_ACCESS_TOKEN) varName = 'GH_ACCESS_TOKEN'
+      
+      console.log(`✅ Using GitHub token from ${varName} (loaded from .env file or environment variable)\n`)
     } else {
+      // Debug: Show which .env files were checked and if they contain token
+      const fs = require('fs')
+      console.log('🔍 Debug: No token found. Checked .env files:')
+      let foundTokenInFile = false
+      for (const envPath of envPaths) {
+        const exists = fs.existsSync(envPath)
+        if (exists) {
+          try {
+            const content = fs.readFileSync(envPath, 'utf-8')
+            const hasToken = /^\s*(GITHUB_TOKEN|GH_TOKEN|GITHUB_ACCESS_TOKEN|GH_ACCESS_TOKEN)\s*=/.test(content)
+            if (hasToken) {
+              foundTokenInFile = true
+              console.log(`   ⚠ ${envPath} (contains token but not loaded - check format)`)
+            } else {
+              console.log(`   ✓ ${envPath} (exists but no token variable)`)
+            }
+          } catch {
+            console.log(`   ✓ ${envPath} (exists)`)
+          }
+        } else {
+          console.log(`   ✗ ${envPath} (not found)`)
+        }
+      }
+      if (foundTokenInFile) {
+        console.log('\n   💡 Token found in .env file but not loaded. Make sure the format is:')
+        console.log('      GITHUB_TOKEN=your-token-here')
+        console.log('   (No spaces around =, no quotes needed)\n')
+      } else {
+        console.log()
+      }
       console.log('🔑 GitHub authentication required')
       console.log('   Note: This tool needs a GitHub Personal Access Token')
       console.log('   You can:')
@@ -369,18 +416,12 @@ async function main() {
       process.exit(1)
     }
 
-    // Get repository info
-    const repoInput = await question('Enter repository (owner/repo): ')
-    const [owner, repo] = repoInput.split('/').map(s => s.trim())
-    
-    if (!owner || !repo) {
-      console.error('❌ Invalid repository format. Use: owner/repo')
-      console.log('   Example: faizm10/code-keeper')
-      process.exit(1)
-    }
-
-    // Remove .git suffix if present
+    // Hardcoded repository
+    const owner = 'faizm10'
+    const repo = 'code-keeper'
     const cleanRepo = repo.replace(/\.git$/, '')
+    
+    console.log(`📦 Using repository: ${owner}/${cleanRepo}\n`)
 
     // Get PR number
     const prNumberInput = await question('Enter PR number: ')
