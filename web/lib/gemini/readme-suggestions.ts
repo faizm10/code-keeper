@@ -51,7 +51,21 @@ function buildReadmeSuggestionPrompt(options: ReadmeSuggestionOptions): string {
 
   const eventsList = detectedEvents.length > 0 ? detectedEvents.map((e) => `- ${e}`).join('\n') : 'None detected'
 
-  return `You are CodeKeeper, an AI assistant that helps maintain documentation. Your task is to suggest specific README updates based on code changes in a pull request.
+  return `You are CodeKeeper, an AI assistant that helps maintain simple, user-focused README documentation. Your task is to suggest README updates that focus ONLY on what new users/leads need to know to get started quickly.
+
+## Core Principle: Keep It Simple for New Users
+The README should be concise, actionable, and focused on helping new users understand:
+- What the project does (in plain language)
+- How to get started quickly
+- Essential features they need to know
+- Basic configuration/requirements
+
+**AVOID:**
+- Overly technical implementation details
+- Comprehensive API documentation (that belongs in separate docs)
+- Internal architecture explanations
+- Detailed troubleshooting guides
+- Extensive examples or edge cases
 
 ## Pull Request Context
 - **Title**: ${prTitle}
@@ -67,46 +81,32 @@ ${currentReadme ? `## Current README Content
 ${currentReadme.slice(0, 5000)}
 \`\`\`
 ` : `## Current README
-No README content provided. Please suggest new sections to add.`}
+No README content provided. Please suggest essential sections for new users.`}
 
 ## Your Task
-Analyze the code changes and suggest specific README updates. Consider:
+Analyze the code changes and suggest README updates that help NEW USERS understand what they need to know. Focus on:
 
-1. **New Features/Endpoints**: If new API endpoints, functions, or features were added, suggest updates to:
-   - Features/Functionality sections
-   - API documentation
-   - Usage examples
-   - Installation/setup instructions
+1. **Quick Start**: If setup/installation changed, update the "Getting Started" section with simple, step-by-step instructions
+2. **What's New**: If new features were added, briefly mention them in a "Features" or "What It Does" section (1-2 sentences each)
+3. **Essential Configuration**: If environment variables or config changed, add a simple "Configuration" section with only the essential variables
+4. **Breaking Changes**: If breaking changes occurred, add a brief "Migration" note (2-3 sentences max)
 
-2. **Configuration Changes**: If environment variables, config files, or dependencies changed, suggest updates to:
-   - Environment variables section
-   - Configuration documentation
-   - Setup/installation steps
-
-3. **Architecture Changes**: If significant structural changes occurred, suggest updates to:
-   - Architecture/Design sections
-   - Project structure
-   - Component/module descriptions
-
-4. **Breaking Changes**: If any breaking changes are detected, suggest:
-   - Migration guides
-   - Changelog entries
-   - Deprecation notices
-
-5. **New Dependencies**: If new packages or tools were added, suggest updates to:
-   - Dependencies section
-   - Installation instructions
-   - Requirements
+**DO NOT suggest:**
+- Detailed API documentation
+- Complex architecture diagrams
+- Extensive troubleshooting sections
+- Multiple examples or edge cases
+- Internal implementation details
 
 ## Output Format
 Return a JSON object with this structure:
 {
   "suggestions": [
     {
-      "section": "Section name (e.g., 'Features', 'API Reference', 'Configuration')",
+      "section": "Section name (e.g., 'Getting Started', 'Features', 'Configuration')",
       "currentContent": "Current content in that section (if applicable)",
-      "suggestedContent": "Suggested new or updated content for this section",
-      "reason": "Why this update is needed based on the code changes",
+      "suggestedContent": "Suggested new or updated content - KEEP IT SHORT AND SIMPLE (2-5 sentences max per section)",
+      "reason": "Why this update is needed for new users",
       "priority": "high" | "medium" | "low"
     }
   ],
@@ -115,15 +115,32 @@ Return a JSON object with this structure:
 }
 
 ## Guidelines
-- Be specific and actionable - provide actual content suggestions, not just vague recommendations
-- Focus on sections that directly relate to the code changes
-- Prioritize high-impact changes (new features, breaking changes, new APIs)
-- If the README is missing, suggest a complete structure
-- Keep suggestions concise but informative
-- Use markdown formatting in suggestedContent
-- Consider the user's perspective - what would they need to know?
+- **Simplicity First**: Each section should be 2-5 sentences maximum
+- **New User Focus**: Write as if explaining to someone who has never seen the project
+- **Actionable**: Focus on "how to" rather than "what is"
+- **Concise**: Remove any unnecessary words or technical jargon
+- **Essential Only**: Only include information new users absolutely need
+- **Plain Language**: Avoid technical terms unless necessary, and explain them when used
+- **Quick Wins**: Prioritize sections that help users get started in under 5 minutes
 
-Generate the suggestions now:`
+**Example of good, simple content:**
+\`\`\`markdown
+## Getting Started
+
+1. Clone the repository
+2. Run \`npm install\`
+3. Set \`API_KEY\` in your environment
+4. Run \`npm start\`
+\`\`\`
+
+**Example of content to avoid:**
+\`\`\`markdown
+## Architecture Overview
+
+The system uses a microservices architecture with event-driven communication. The API gateway handles routing through a load balancer that distributes requests across multiple instances. Each service maintains its own database using the CQRS pattern...
+\`\`\`
+
+Generate simple, user-focused suggestions now:`
 }
 
 /**
