@@ -116,21 +116,94 @@ function extractJsonResponse(raw: string) {
     throw new Error('Empty response from Gemini')
   }
 
-  if (trimmed.startsWith('{')) {
-    return JSON.parse(trimmed)
+  // Helper to safely parse JSON with better error handling
+  const tryParse = (jsonStr: string, context: string): any => {
+    try {
+      return JSON.parse(jsonStr)
+    } catch (error: any) {
+      const errorMsg = error.message || String(error)
+      const position = errorMsg.match(/position (\d+)/)?.[1]
+      
+      // Try to fix common JSON issues
+      let fixed = jsonStr
+      
+      // Try to find and close unclosed strings
+      if (errorMsg.includes('Unterminated string')) {
+        // Find the last complete object/array before the error
+        const errorPos = position ? parseInt(position, 10) : jsonStr.length
+        const beforeError = jsonStr.substring(0, errorPos)
+        
+        // Try to find the last complete JSON object
+        let lastBrace = beforeError.lastIndexOf('}')
+        let lastBracket = beforeError.lastIndexOf(']')
+        const lastComplete = Math.max(lastBrace, lastBracket)
+        
+        if (lastComplete > 0) {
+          // Try parsing just the complete part
+          try {
+            const partial = jsonStr.substring(0, lastComplete + 1)
+            return JSON.parse(partial)
+          } catch {
+            // If that fails, try to close the JSON structure
+            fixed = beforeError
+            // Count open braces/brackets
+            const openBraces = (fixed.match(/{/g) || []).length
+            const closeBraces = (fixed.match(/}/g) || []).length
+            const openBrackets = (fixed.match(/\[/g) || []).length
+            const closeBrackets = (fixed.match(/\]/g) || []).length
+            
+            // Close unclosed structures
+            fixed += '}'.repeat(Math.max(0, openBraces - closeBraces))
+            fixed += ']'.repeat(Math.max(0, openBrackets - closeBrackets))
+            
+            try {
+              return JSON.parse(fixed)
+            } catch {
+              // If still fails, throw with more context
+              throw new Error(
+                `JSON parse error in ${context}: ${errorMsg}\n` +
+                `Response length: ${jsonStr.length}, Error position: ${position}\n` +
+                `First 500 chars: ${jsonStr.substring(0, 500)}\n` +
+                `Around error: ${jsonStr.substring(Math.max(0, (parseInt(position || '0', 10) - 100)), parseInt(position || '0', 10) + 100)}`
+              )
+            }
+          }
+        }
+      }
+      
+      // If we can't fix it, throw with context
+      throw new Error(
+        `JSON parse error in ${context}: ${errorMsg}\n` +
+        `Response length: ${jsonStr.length}${position ? `, Error position: ${position}` : ''}\n` +
+        `First 500 chars: ${jsonStr.substring(0, 500)}`
+      )
+    }
   }
 
+  // Try parsing as direct JSON first
+  if (trimmed.startsWith('{')) {
+    return tryParse(trimmed, 'direct JSON')
+  }
+
+  // Try extracting from code fences
   const fenced = trimmed.match(/```json([\s\S]*?)```/i)
   if (fenced && fenced[1]) {
-    return JSON.parse(fenced[1])
+    return tryParse(fenced[1].trim(), 'fenced JSON block')
   }
 
   const fallback = trimmed.match(/```([\s\S]*?)```/i)
   if (fallback && fallback[1]) {
-    return JSON.parse(fallback[1])
+    return tryParse(fallback[1].trim(), 'fenced code block')
   }
 
-  return JSON.parse(trimmed)
+  // Try to find JSON object in the text
+  const jsonMatch = trimmed.match(/\{[\s\S]*\}/)
+  if (jsonMatch && jsonMatch[0]) {
+    return tryParse(jsonMatch[0], 'extracted JSON object')
+  }
+
+  // Last resort: try parsing the whole thing
+  return tryParse(trimmed, 'full response')
 }
 
 export async function analyzePullRequestWithGemini(

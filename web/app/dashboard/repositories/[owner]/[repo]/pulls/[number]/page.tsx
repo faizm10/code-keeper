@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button'
 import { Markdown } from '@/components/ui/markdown'
 import { PRAdviceButton } from '@/components/dashboard/pr-advice-button'
 import { PRAdviceDisplay } from '@/components/dashboard/pr-advice-display'
+import { ReadmeSuggestionsDisplay } from '@/components/dashboard/readme-suggestions-display'
 
 type RouteParams = {
   owner: string
@@ -235,13 +236,18 @@ export default async function PullRequestDetailsPage({
             )}
           </div>
 
-          <div className="mt-6">
+          <div className="mt-6 space-y-6">
             <PRAdviceDisplay 
               owner={owner} 
               repo={repo} 
               prNumber={pullRequest.number}
               initialHeadSha={pullRequest.head.sha}
               initialCommits={pullRequest.commits}
+            />
+            <ReadmeSuggestionsDisplay
+              owner={owner}
+              repo={repo}
+              prNumber={pullRequest.number}
             />
           </div>
 
