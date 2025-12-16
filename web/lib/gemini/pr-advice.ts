@@ -13,17 +13,18 @@ export type PRFileForGemini = {
 }
 
 export type GeminiPRAnalysis = {
-  zones: RepoZone[]
-  events: string[]
-  obligations: string[]
-  docsTouched: boolean
-  docFilesTouched: string[]
-  missingDocs: string[]
-  shouldWarn: boolean
-  reasoning: string
-  summary: string
-  comment: string
-  fileSummaries: Array<{
+  // Legacy fields (for backward compatibility)
+  zones?: RepoZone[]
+  events?: string[]
+  obligations?: string[]
+  docsTouched?: boolean
+  docFilesTouched?: string[]
+  missingDocs?: string[]
+  shouldWarn?: boolean
+  reasoning?: string
+  summary?: string
+  comment?: string
+  fileSummaries?: Array<{
     path: string
     status?: 'added' | 'modified' | 'removed' | 'renamed'
     changeMagnitude?: 'minor' | 'moderate' | 'significant'
@@ -32,6 +33,93 @@ export type GeminiPRAnalysis = {
   }>
   tone?: string
   confidence?: 'high' | 'medium' | 'low'
+  
+  // New comprehensive structure
+  executiveSummary?: string
+  category?: 'feature' | 'refactor' | 'bugfix' | 'performance' | 'security' | 'infrastructure' | 'chore'
+  whatChanged?: {
+    headline: string
+    details: string[]
+  }
+  technicalApproach?: {
+    overview: string
+    designPatterns: string[]
+    libraries: Array<{
+      name: string
+      version?: string
+      purpose: string
+    }>
+    architecture?: string
+  }
+  implementationDetails?: {
+    configuration: string[]
+    dataFlow: string
+    entryPoints: string[]
+    integration: string[]
+    storage: string[]
+  }
+  fileBreakdown?: Array<{
+    path: string
+    purpose: string
+    keyComponents: string[]
+    complexity: 'low' | 'medium' | 'high' | 'very-high'
+    importance: 'low' | 'medium' | 'high' | 'critical'
+  }>
+  keyInsights?: string[]
+  developerImpact?: {
+    newAPIs: Array<{
+      name: string
+      location: string
+      usage: string
+      description: string
+    }>
+    breakingChanges?: string[]
+    migrationSteps?: string[]
+  }
+  setupRequirements?: {
+    environmentVariables: Array<{
+      name: string
+      required: boolean
+      default?: string
+      description: string
+    }>
+    dependencies?: string[]
+    infrastructure?: string[]
+    commands?: string[]
+  }
+  qualityAssessment?: {
+    strengths: string[]
+    concerns: string[]
+    testCoverage: {
+      status: 'excellent' | 'good' | 'partial' | 'minimal' | 'none'
+      details: string
+    }
+    security: {
+      considerations: string[]
+      risks: string[]
+    }
+  }
+  documentation?: {
+    docsUpdated: boolean
+    quality: 'excellent' | 'good' | 'adequate' | 'poor' | 'missing'
+    suggestions: string[]
+    inlineComments?: string
+  }
+  recommendations?: {
+    beforeMerge: string[]
+    afterMerge: string[]
+    teamCommunication: string[]
+  }
+  prComment?: {
+    tone: 'positive' | 'neutral' | 'concerned'
+    message: string
+  }
+  metadata?: {
+    confidence: 'high' | 'medium' | 'low'
+    complexity: 'low' | 'medium' | 'high' | 'very-high'
+    impactScope: 'isolated' | 'moderate' | 'widespread' | 'critical'
+    estimatedReviewTime?: string
+  }
 }
 
 type PromptOptions = {
@@ -116,21 +204,94 @@ function extractJsonResponse(raw: string) {
     throw new Error('Empty response from Gemini')
   }
 
-  if (trimmed.startsWith('{')) {
-    return JSON.parse(trimmed)
+  // Helper to safely parse JSON with better error handling
+  const tryParse = (jsonStr: string, context: string): any => {
+    try {
+      return JSON.parse(jsonStr)
+    } catch (error: any) {
+      const errorMsg = error.message || String(error)
+      const position = errorMsg.match(/position (\d+)/)?.[1]
+      
+      // Try to fix common JSON issues
+      let fixed = jsonStr
+      
+      // Try to find and close unclosed strings
+      if (errorMsg.includes('Unterminated string')) {
+        // Find the last complete object/array before the error
+        const errorPos = position ? parseInt(position, 10) : jsonStr.length
+        const beforeError = jsonStr.substring(0, errorPos)
+        
+        // Try to find the last complete JSON object
+        let lastBrace = beforeError.lastIndexOf('}')
+        let lastBracket = beforeError.lastIndexOf(']')
+        const lastComplete = Math.max(lastBrace, lastBracket)
+        
+        if (lastComplete > 0) {
+          // Try parsing just the complete part
+          try {
+            const partial = jsonStr.substring(0, lastComplete + 1)
+            return JSON.parse(partial)
+          } catch {
+            // If that fails, try to close the JSON structure
+            fixed = beforeError
+            // Count open braces/brackets
+            const openBraces = (fixed.match(/{/g) || []).length
+            const closeBraces = (fixed.match(/}/g) || []).length
+            const openBrackets = (fixed.match(/\[/g) || []).length
+            const closeBrackets = (fixed.match(/\]/g) || []).length
+            
+            // Close unclosed structures
+            fixed += '}'.repeat(Math.max(0, openBraces - closeBraces))
+            fixed += ']'.repeat(Math.max(0, openBrackets - closeBrackets))
+            
+            try {
+              return JSON.parse(fixed)
+            } catch {
+              // If still fails, throw with more context
+              throw new Error(
+                `JSON parse error in ${context}: ${errorMsg}\n` +
+                `Response length: ${jsonStr.length}, Error position: ${position}\n` +
+                `First 500 chars: ${jsonStr.substring(0, 500)}\n` +
+                `Around error: ${jsonStr.substring(Math.max(0, (parseInt(position || '0', 10) - 100)), parseInt(position || '0', 10) + 100)}`
+              )
+            }
+          }
+        }
+      }
+      
+      // If we can't fix it, throw with context
+      throw new Error(
+        `JSON parse error in ${context}: ${errorMsg}\n` +
+        `Response length: ${jsonStr.length}${position ? `, Error position: ${position}` : ''}\n` +
+        `First 500 chars: ${jsonStr.substring(0, 500)}`
+      )
+    }
   }
 
+  // Try parsing as direct JSON first
+  if (trimmed.startsWith('{')) {
+    return tryParse(trimmed, 'direct JSON')
+  }
+
+  // Try extracting from code fences
   const fenced = trimmed.match(/```json([\s\S]*?)```/i)
   if (fenced && fenced[1]) {
-    return JSON.parse(fenced[1])
+    return tryParse(fenced[1].trim(), 'fenced JSON block')
   }
 
   const fallback = trimmed.match(/```([\s\S]*?)```/i)
   if (fallback && fallback[1]) {
-    return JSON.parse(fallback[1])
+    return tryParse(fallback[1].trim(), 'fenced code block')
   }
 
-  return JSON.parse(trimmed)
+  // Try to find JSON object in the text
+  const jsonMatch = trimmed.match(/\{[\s\S]*\}/)
+  if (jsonMatch && jsonMatch[0]) {
+    return tryParse(jsonMatch[0], 'extracted JSON object')
+  }
+
+  // Last resort: try parsing the whole thing
+  return tryParse(trimmed, 'full response')
 }
 
 export async function analyzePullRequestWithGemini(
@@ -173,6 +334,7 @@ export async function analyzePullRequestWithGemini(
   const parsed = extractJsonResponse(text) as Partial<GeminiPRAnalysis>
 
   return {
+    // Legacy fields (for backward compatibility)
     zones: parsed.zones ?? [],
     events: parsed.events ?? [],
     obligations: parsed.obligations ?? [],
@@ -186,6 +348,21 @@ export async function analyzePullRequestWithGemini(
     fileSummaries: parsed.fileSummaries ?? [],
     tone: parsed.tone,
     confidence: parsed.confidence,
+    // New comprehensive structure
+    executiveSummary: parsed.executiveSummary,
+    category: parsed.category,
+    whatChanged: parsed.whatChanged,
+    technicalApproach: parsed.technicalApproach,
+    implementationDetails: parsed.implementationDetails,
+    fileBreakdown: parsed.fileBreakdown,
+    keyInsights: parsed.keyInsights,
+    developerImpact: parsed.developerImpact,
+    setupRequirements: parsed.setupRequirements,
+    qualityAssessment: parsed.qualityAssessment,
+    documentation: parsed.documentation,
+    recommendations: parsed.recommendations,
+    prComment: parsed.prComment,
+    metadata: parsed.metadata,
   }
 }
 
